@@ -21,8 +21,6 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 
@@ -308,8 +306,11 @@ public class BackgroundGeolocationFacade {
     }
 
     public int getAuthorizationStatus() throws SettingNotFoundException {
-        boolean enabled = isLocationEnabled(getContext());
-        return enabled ? AUTHORIZATION_AUTHORIZED : AUTHORIZATION_DENIED;
+        return hasPermissions() ? AUTHORIZATION_AUTHORIZED : AUTHORIZATION_DENIED;
+    }
+
+    public boolean locationServicesEnabled() throws SettingNotFoundException {
+        return locationServicesEnabled(getContext());
     }
 
     private Config getStoredOrDefaultConfig() throws JSONException {
@@ -475,16 +476,26 @@ public class BackgroundGeolocationFacade {
         context.startActivity(intent);
     }
 
-    private static boolean isLocationEnabled(Context context) throws SettingNotFoundException {
-        int locationMode = 0;
-        String locationProviders;
 
+    public boolean hasPermissions() {
+        return hasPermissions(getContext(), PERMISSIONS);
+    }
+
+    public static boolean hasPermissions(Context context, String[] permissions) {
+        for (String perm: permissions) {
+            if (ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean locationServicesEnabled(Context context) throws SettingNotFoundException {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
+            int locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
             return locationMode != Settings.Secure.LOCATION_MODE_OFF;
-
         } else {
-            locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+            String locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
             return !TextUtils.isEmpty(locationProviders);
         }
     }
