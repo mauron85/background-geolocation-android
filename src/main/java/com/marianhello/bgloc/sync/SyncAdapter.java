@@ -1,12 +1,14 @@
 package com.marianhello.bgloc.sync;
 
 import android.accounts.Account;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SyncResult;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -33,10 +35,13 @@ import java.util.HashMap;
 public class SyncAdapter extends AbstractThreadedSyncAdapter implements UploadingCallback {
 
     private static final int NOTIFICATION_ID = 666;
+    private static final String CHANNEL_ID = "syncservice";
+    private static final String CHANNEL_NAME = "Sync Service";
+    private static final String CHANNEL_DESCRIPTION = "Shows sync progress";
 
     ContentResolver contentResolver;
     private ConfigurationDAO configDAO;
-    private NotificationManager notifyManager;
+    private NotificationManager notificationManager;
     private BatchManager batchManager;
 
     private org.slf4j.Logger logger;
@@ -45,17 +50,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
      * Set up the sync adapter
      */
     public SyncAdapter(Context context, boolean autoInitialize) {
-        super(context, autoInitialize);
-        logger = LoggerManager.getLogger(SyncAdapter.class);
-
-        /*
-         * If your app uses a content resolver, get an instance of it
-         * from the incoming Context
-         */
-        contentResolver = context.getContentResolver();
-        configDAO = DAOFactory.createConfigurationDAO(context);
-        batchManager = new BatchManager(this.getContext());
-        notifyManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        this(context, autoInitialize, false);
     }
 
 
@@ -68,8 +63,8 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
             Context context,
             boolean autoInitialize,
             boolean allowParallelSyncs) {
-        super(context, autoInitialize, allowParallelSyncs);
 
+        super(context, autoInitialize);
         logger = LoggerManager.getLogger(SyncAdapter.class);
 
         /*
@@ -79,7 +74,16 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         contentResolver = context.getContentResolver();
         configDAO = DAOFactory.createConfigurationDAO(context);
         batchManager = new BatchManager(this.getContext());
-        notifyManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Create the NotificationChannel, but only on API 26+ because
+            // the NotificationChannel class is new and not in the support library
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(CHANNEL_DESCRIPTION);
+            // Register the channel with the system
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     /*
@@ -142,12 +146,12 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
     }
 
     private boolean uploadLocations(File file, String url, HashMap httpHeaders) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID);
         builder.setOngoing(true);
         builder.setContentTitle("Syncing locations");
         builder.setContentText("Sync in progress");
         builder.setSmallIcon(android.R.drawable.ic_dialog_info);
-        notifyManager.notify(NOTIFICATION_ID, builder.build());
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
 
         try {
             int responseCode = HttpPostService.postFile(url, file, httpHeaders, this);
@@ -167,14 +171,14 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
             builder.setOngoing(false);
             builder.setProgress(0, 0, false);
             builder.setAutoCancel(true);
-            notifyManager.notify(NOTIFICATION_ID, builder.build());
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
             
             Handler h = new Handler(Looper.getMainLooper());
             long delayInMilliseconds = 5000;
             h.postDelayed(new Runnable() {
                 public void run() {
                     logger.info("Notification cancelledAt: {}", System.currentTimeMillis());
-                    notifyManager.cancel(NOTIFICATION_ID);
+                    notificationManager.cancel(NOTIFICATION_ID);
                 }
             }, delayInMilliseconds);
         }
@@ -184,12 +188,12 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
 
     public void uploadListener(int progress) {
         logger.debug("Syncing progress: {} updatedAt: {}", progress, System.currentTimeMillis());
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID);
         builder.setOngoing(true);
         builder.setContentTitle("Syncing locations");
         builder.setContentText("Sync in progress");
         builder.setSmallIcon(android.R.drawable.ic_dialog_info);
         builder.setProgress(100, progress, false);
-        notifyManager.notify(NOTIFICATION_ID, builder.build());
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
     }
 }

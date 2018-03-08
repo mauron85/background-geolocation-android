@@ -11,6 +11,7 @@ package com.marianhello.bgloc;
 
 import android.accounts.Account;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -119,8 +120,11 @@ public class LocationService extends Service implements ProviderDelegate {
 
     /** indicate if service is running */
     private static Boolean isRunning = false;
+
     /** notification id */
     private static int NOTIF_ID = 1;
+    /** notification channel id */
+    private static String CHANNEL_ID = "bglocservice";
 
     private static final int ONE_MINUTE_IN_MILLIS = 1000 * 60;
 
@@ -216,6 +220,16 @@ public class LocationService extends Service implements ProviderDelegate {
         mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getStringResource(SyncService.ACCOUNT_TYPE_RESOURCE));
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Create the NotificationChannel, but only on API 26+ because
+            // the NotificationChannel class is new and not in the support library
+            String appName = getStringResource("app_name");
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, appName, NotificationManager.IMPORTANCE_DEFAULT);
+            // Register the channel with the system
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     @Override
@@ -322,7 +336,8 @@ public class LocationService extends Service implements ProviderDelegate {
 
         public Notification getNotification(String title, String text, String largeIcon, String smallIcon, String color) {
             // Build a Notification required for running service in foreground.
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(LocationService.this);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(LocationService.this, CHANNEL_ID);
+
             builder.setContentTitle(title);
             builder.setContentText(text);
             if (smallIcon != null && !smallIcon.isEmpty()) {
