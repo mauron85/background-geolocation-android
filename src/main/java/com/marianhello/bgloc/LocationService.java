@@ -212,7 +212,9 @@ public class LocationService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         logger.debug("Task has been removed");
-        if (mConfig.getStopOnTerminate()) {
+        // workaround for issue #276
+        Config config = getConfig();
+        if (config.getStopOnTerminate()) {
             logger.info("Stopping self");
             stopSelf();
         } else {
@@ -231,13 +233,7 @@ public class LocationService extends Service {
 
         if (intent == null) {
             //service has been probably restarted so we need to load config from db
-            ConfigurationDAO dao = DAOFactory.createConfigurationDAO(this);
-            try {
-                mConfig = dao.retrieveConfiguration();
-            } catch (JSONException e) {
-                logger.error("Config exception: {}", e.getMessage());
-                mConfig = Config.getDefault(); //using default config
-            }
+            mConfig = getConfig();
         } else {
             if (intent.hasExtra("config")) {
                 mConfig = intent.getParcelableExtra("config");
@@ -505,7 +501,16 @@ public class LocationService extends Service {
     }
 
     public Config getConfig() {
-        return this.mConfig;
+        if (mConfig == null) {
+            ConfigurationDAO dao = DAOFactory.createConfigurationDAO(this);
+            try {
+                mConfig = dao.retrieveConfiguration();
+            } catch (JSONException e) {
+                logger.error("Config exception: {}", e.getMessage());
+                mConfig = Config.getDefault(); //using default config
+            }
+        }
+        return mConfig;
     }
 
 //    public void setConfig(Config config) {
@@ -518,8 +523,8 @@ public class LocationService extends Service {
         protected Boolean doInBackground(BackgroundLocation... locations) {
             logger.debug("Executing PostLocationTask#doInBackground");
             JSONArray jsonLocations = new JSONArray();
+            Config config = getConfig();
             for (BackgroundLocation location : locations) {
-                Config config = getConfig();
                 try {
                     jsonLocations.put(config.getTemplate().locationToJson(location));
                 } catch (JSONException e) {
@@ -528,12 +533,12 @@ public class LocationService extends Service {
                 }
             }
 
-            String url = mConfig.getUrl();
-            logger.debug("Posting json to url: {} headers: {}", url, mConfig.getHttpHeaders());
+            String url = config.getUrl();
+            logger.debug("Posting json to url: {} headers: {}", url, config.getHttpHeaders());
             int responseCode;
 
             try {
-                responseCode = HttpPostService.postJSON(url, jsonLocations, mConfig.getHttpHeaders());
+                responseCode = HttpPostService.postJSON(url, jsonLocations, config.getHttpHeaders());
             } catch (Exception e) {
                 hasConnectivity = isNetworkAvailable();
                 logger.warn("Error while posting locations: {}", e.getMessage());
