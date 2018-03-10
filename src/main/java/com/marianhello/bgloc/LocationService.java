@@ -196,8 +196,11 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         logger.info("Destroying LocationService");
-        mProvider.onDestroy();
-        mProvider = null;
+        // workaround for issue #276
+        if (mProvider != null) {
+            mProvider.onDestroy();
+            mProvider = null;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             handlerThread.quitSafely();
         } else {
