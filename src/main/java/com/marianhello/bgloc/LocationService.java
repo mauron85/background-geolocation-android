@@ -184,7 +184,7 @@ public class LocationService extends Service {
         serviceHandler = new ServiceHandler(handlerThread.getLooper());
 
         dao = (DAOFactory.createLocationDAO(this));
-        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getPackageName() + SyncService.ACCOUNT_TYPE_SUFFIX);
+        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getStringResource(SyncService.ACCOUNT_TYPE_RESOURCE));
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
@@ -482,7 +482,7 @@ public class LocationService extends Service {
             logger.debug("Location to sync: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
             if (locationsCount >= mConfig.getSyncThreshold()) {
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
-                SyncService.sync(mSyncAccount, getPackageName() + SyncService.AUTHORITY_SUFFIX);
+                SyncService.sync(mSyncAccount, getStringResource(SyncService.AUTHORITY_TYPE_RESOURCE));
             }
         }
     }
