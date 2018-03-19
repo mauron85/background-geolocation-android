@@ -40,15 +40,12 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
-import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.sync.AccountHelper;
-import com.marianhello.bgloc.sync.AuthenticatorService;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
@@ -187,8 +184,7 @@ public class LocationService extends Service {
         serviceHandler = new ServiceHandler(handlerThread.getLooper());
 
         dao = (DAOFactory.createLocationDAO(this));
-        mSyncAccount = AccountHelper.CreateSyncAccount(this,
-                AuthenticatorService.getAccount(getStringResource(Config.ACCOUNT_TYPE_RESOURCE)));
+        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getPackageName() + SyncService.ACCOUNT_TYPE_SUFFIX);
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
@@ -486,7 +482,7 @@ public class LocationService extends Service {
             logger.debug("Location to sync: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
             if (locationsCount >= mConfig.getSyncThreshold()) {
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
-                SyncService.sync(mSyncAccount, getStringResource(Config.CONTENT_AUTHORITY_RESOURCE));
+                SyncService.sync(mSyncAccount, getPackageName() + SyncService.AUTHORITY_SUFFIX);
             }
         }
     }

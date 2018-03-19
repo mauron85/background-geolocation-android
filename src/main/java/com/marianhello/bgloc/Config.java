@@ -35,10 +35,6 @@ public class Config implements Parcelable, Cloneable
     public static final int ACTIVITY_PROVIDER = 1;
     public static final int RAW_PROVIDER = 2;
 
-    // actual values should be read from strings.xml
-    public static final String ACCOUNT_TYPE_RESOURCE = "account_type";
-    public static final String CONTENT_AUTHORITY_RESOURCE = "content_authority";
-
     private Float stationaryRadius;
     private Integer distanceFilter;
     private Integer desiredAccuracy;

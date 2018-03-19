@@ -1,6 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Make sure you override following in your app res/values/strings.xml -->
-    <string name="app_name">APP_NAME</string>
-    <string name="account_type">com.marianhello.account</string>
-    <string name="content_authority">com.marianhello.authority</string>
+    <string name="app_name">app_name</string>
 </resources>

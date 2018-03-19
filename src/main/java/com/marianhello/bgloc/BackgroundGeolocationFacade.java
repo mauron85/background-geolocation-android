@@ -70,10 +70,6 @@ public class BackgroundGeolocationFacade {
         logger = LoggerManager.getLogger(BackgroundGeolocationFacade.class);
         LoggerManager.enableDBLogging();
 
-        // TODO: investigate if we can enable background sync conditionally
-//        final ResourceResolver res = ResourceResolver.newInstance(getApplication());
-//        final String authority = res.getStringResource(Config.CONTENT_AUTHORITY_RESOURCE);
-
         logger.info("Initializing plugin");
     }
 

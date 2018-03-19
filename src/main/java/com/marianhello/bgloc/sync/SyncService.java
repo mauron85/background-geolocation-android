@@ -13,6 +13,9 @@ import android.os.IBinder;
  * onPerformSync().
  */
 public class SyncService extends Service {
+    public static final String ACCOUNT_NAME = "dummy";
+    public static final String ACCOUNT_TYPE_SUFFIX = "";
+    public static final String AUTHORITY_SUFFIX = ".authority";
 
     // Storage for an instance of the sync adapter
     private static SyncAdapter sSyncAdapter = null;
