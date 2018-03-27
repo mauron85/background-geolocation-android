@@ -339,7 +339,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
                 scaledDistanceFilter = newDistanceFilter;
                 setPace(true);
             }
-            if (location.distanceTo(lastLocation) < mConfig.getDistanceFilter()) {
+            if (lastLocation != null && location.distanceTo(lastLocation) < mConfig.getDistanceFilter()) {
                 return;
             }
         } else if (stationaryLocation != null) {
