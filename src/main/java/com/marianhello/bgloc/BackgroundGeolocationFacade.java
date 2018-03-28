@@ -57,6 +57,7 @@ public class BackgroundGeolocationFacade {
     private Boolean locationModeChangeReceiverRegistered = false;
     private Config mConfig = null;
     private PluginDelegate mDelegate;
+    private int mMode = FOREGROUND_MODE;
 
     private BackgroundLocation mStationaryLocation;
 
@@ -73,6 +74,17 @@ public class BackgroundGeolocationFacade {
         logger.info("Initializing plugin");
     }
 
+    public void init() {
+        mMode = FOREGROUND_MODE;
+        if (LocationService.isRunning()) {
+            if (!mIsBound) {
+                safeBindService();
+            }
+            if (!locationModeChangeReceiverRegistered) {
+                registerLocationModeChangeReceiver();
+            }
+        }
+    }
     public void onAppDestroy() {
         logger.info("Destroying plugin");
 
@@ -155,6 +167,7 @@ public class BackgroundGeolocationFacade {
                 msg.replyTo = mMessenger;
                 msg.arg1 = MESSENGER_CLIENT_ID;
                 mService.send(msg);
+                switchMode(mMode);
             } catch (RemoteException e) {
                 // In this case the service has crashed before we could even
                 // do anything with it; we can count on soon being
@@ -242,6 +255,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public void switchMode(int mode) {
+        mMode = mode;
         if (LocationService.isRunning()) {
             if (!mIsBound) {
                 safeBindService();

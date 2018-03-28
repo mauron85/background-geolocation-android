@@ -115,7 +115,7 @@ public class LocationService extends Service {
     private Config mConfig;
     private LocationProvider mProvider;
     private Account mSyncAccount;
-    private Boolean hasConnectivity = true;
+    private boolean hasConnectivity = true;
 
     private org.slf4j.Logger logger;
 
