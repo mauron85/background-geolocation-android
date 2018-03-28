@@ -40,6 +40,11 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
+import com.marianhello.bgloc.headless.ActivityTask;
+import com.marianhello.bgloc.headless.HeadlessTaskRunner;
+import com.marianhello.bgloc.headless.LocationTask;
+import com.marianhello.bgloc.headless.StationaryTask;
+import com.marianhello.bgloc.headless.Task;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;
@@ -104,6 +109,8 @@ public class LocationService extends Service {
      */
     public static final int MSG_ON_ACTIVITY = 8;
 
+    public static final int MSG_REGISTER_HEADLESS_TASK = 9;
+
     /** indicate if service is running */
     private static Boolean isRunning = false;
     /** notification id */
@@ -116,11 +123,13 @@ public class LocationService extends Service {
     private LocationProvider mProvider;
     private Account mSyncAccount;
     private boolean hasConnectivity = true;
+    private boolean hasBoundClients = false;
 
     private org.slf4j.Logger logger;
 
     private volatile HandlerThread handlerThread;
     private ServiceHandler serviceHandler;
+    private HeadlessTaskRunner mHeadlessTaskRunner;
 
     private class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
@@ -138,6 +147,7 @@ public class LocationService extends Service {
     private class IncomingHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
+            logger.debug("Handler received message: {}", msg);
             switch (msg.what) {
                 case MSG_REGISTER_CLIENT:
                     mClients.put(msg.arg1, msg.replyTo);
@@ -150,6 +160,9 @@ public class LocationService extends Service {
                     break;
                 case MSG_CONFIGURE:
                     configure(msg.getData());
+                    break;
+                case MSG_REGISTER_HEADLESS_TASK:
+                    registerHeadlessTask(msg.getData());
                     break;
                 default:
                     super.handleMessage(msg);
@@ -168,7 +181,17 @@ public class LocationService extends Service {
      */
     @Override
     public IBinder onBind(Intent intent) {
+        logger.debug("Client bind to service");
+        hasBoundClients = true;
         return messenger.getBinder();
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        // All clients have unbound with unbindService()
+        logger.debug("All clients have unbound from service");
+        hasBoundClients = false;
+        return false;
     }
 
     @Override
@@ -372,6 +395,13 @@ public class LocationService extends Service {
         configure(config);
     }
 
+    private void registerHeadlessTask(Bundle bundle) {
+        logger.debug("Registering headless task");
+        String jsFunction = bundle.getString(HeadlessTaskRunner.BUNDLE_KEY);
+        mHeadlessTaskRunner = new HeadlessTaskRunner(this);
+        mHeadlessTaskRunner.setFunction(jsFunction);
+    }
+
     /**
      * Handle location from location location mProvider
      *
@@ -402,6 +432,17 @@ public class LocationService extends Service {
         msg.setData(bundle);
 
         sendClientMessage(msg);
+        runHeadlessTask(new LocationTask(location) {
+            @Override
+            public void onError(String errorMessage) {
+                logger.error("Location task error: {}", errorMessage);
+            }
+
+            @Override
+            public void onResult(String value) {
+                logger.debug("Location task result: {}", value);
+            }
+        });
     }
 
     public void handleStationary(BackgroundLocation location) {
@@ -418,6 +459,17 @@ public class LocationService extends Service {
         msg.setData(bundle);
 
         sendClientMessage(msg);
+        runHeadlessTask(new StationaryTask(location){
+            @Override
+            public void onError(String errorMessage) {
+                logger.error("Stationary task error: {}", errorMessage);
+            }
+
+            @Override
+            public void onResult(String value) {
+                logger.debug("Stationary task result: {}", value);
+            }
+        });
     }
 
     public void handleActivity(BackgroundActivity activity) {
@@ -429,6 +481,17 @@ public class LocationService extends Service {
         msg.setData(bundle);
 
         sendClientMessage(msg);
+        runHeadlessTask(new ActivityTask(activity){
+            @Override
+            public void onError(String errorMessage) {
+                logger.error("Activity task error: {}", errorMessage);
+            }
+
+            @Override
+            public void onResult(String value) {
+                logger.debug("Activity task result: {}", value);
+            }
+        });
     }
 
     public void sendClientMessage(Message msg) {
@@ -515,6 +578,20 @@ public class LocationService extends Service {
 //    public void setConfig(Config config) {
 //        this.mConfig = config;
 //    }
+
+    private void runHeadlessTask(Task task) {
+        if (hasBoundClients) { // only run headless task if there are no bound clients (activity)
+            return;
+        }
+
+        logger.debug("Running headless task: {}", task);
+        if (mHeadlessTaskRunner == null) {
+            logger.warn("HeadlessTaskRunner is null. Skipping task: {}", task);
+            return;
+        }
+
+        mHeadlessTaskRunner.runTask(task);
+    }
 
     private class PostLocationTask extends AsyncTask<BackgroundLocation, Integer, Boolean> {
 

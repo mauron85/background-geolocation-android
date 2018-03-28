@@ -29,6 +29,7 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
+import com.marianhello.bgloc.headless.HeadlessTaskRunner;
 import com.marianhello.logging.DBLogReader;
 import com.marianhello.logging.LogEntry;
 import com.marianhello.logging.LogReader;
@@ -57,6 +58,7 @@ public class BackgroundGeolocationFacade {
     private Boolean locationModeChangeReceiverRegistered = false;
     private Config mConfig = null;
     private PluginDelegate mDelegate;
+    private String mHeadlessJsFunction;
     private int mMode = FOREGROUND_MODE;
 
     private BackgroundLocation mStationaryLocation;
@@ -85,6 +87,7 @@ public class BackgroundGeolocationFacade {
             }
         }
     }
+
     public void onAppDestroy() {
         logger.info("Destroying plugin");
 
@@ -167,7 +170,13 @@ public class BackgroundGeolocationFacade {
                 msg.replyTo = mMessenger;
                 msg.arg1 = MESSENGER_CLIENT_ID;
                 mService.send(msg);
+
                 switchMode(mMode);
+
+                if (mHeadlessJsFunction != null) {
+                    registerHeadlessTask(mHeadlessJsFunction);
+                }
+
             } catch (RemoteException e) {
                 // In this case the service has crashed before we could even
                 // do anything with it; we can count on soon being
@@ -264,7 +273,6 @@ public class BackgroundGeolocationFacade {
                 registerLocationModeChangeReceiver();
             }
         }
-
         Message msg = Message.obtain(null, LocationService.MSG_SWITCH_MODE);
         msg.replyTo = mMessenger;
         msg.arg1 = mode;
@@ -321,6 +329,16 @@ public class BackgroundGeolocationFacade {
 
     public boolean locationServicesEnabled() throws SettingNotFoundException {
         return locationServicesEnabled(getContext());
+    }
+
+    public void registerHeadlessTask(String jsFunction) {
+        mHeadlessJsFunction = jsFunction;
+        Message msg = Message.obtain(null, LocationService.MSG_REGISTER_HEADLESS_TASK);
+        Bundle bundle = new Bundle();
+        bundle.putString(HeadlessTaskRunner.BUNDLE_KEY, jsFunction);
+        msg.setData(bundle);
+        msg.replyTo = mMessenger;
+        serviceSend(msg);
     }
 
     private Config getStoredOrDefaultConfig() throws JSONException {
