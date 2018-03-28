@@ -118,17 +118,17 @@ public class LocationService extends Service {
 
     private static final int ONE_MINUTE_IN_MILLIS = 1000 * 60;
 
-    private LocationDAO dao;
+    private LocationDAO mLocationDAO;
     private Config mConfig;
     private LocationProvider mProvider;
     private Account mSyncAccount;
-    private boolean hasConnectivity = true;
-    private boolean hasBoundClients = false;
+    private boolean mHasConnectivity = true;
+    private boolean mHasBoundClients = false;
 
     private org.slf4j.Logger logger;
 
-    private volatile HandlerThread handlerThread;
-    private ServiceHandler serviceHandler;
+    private volatile HandlerThread mHandlerThread;
+    private ServiceHandler mServiceHandler;
     private HeadlessTaskRunner mHeadlessTaskRunner;
 
     private class ServiceHandler extends Handler {
@@ -182,7 +182,7 @@ public class LocationService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         logger.debug("Client bind to service");
-        hasBoundClients = true;
+        mHasBoundClients = true;
         return messenger.getBinder();
     }
 
@@ -190,7 +190,7 @@ public class LocationService extends Service {
     public boolean onUnbind(Intent intent) {
         // All clients have unbound with unbindService()
         logger.debug("All clients have unbound from service");
-        hasBoundClients = false;
+        mHasBoundClients = false;
         return false;
     }
 
@@ -201,12 +201,12 @@ public class LocationService extends Service {
         logger.info("Creating LocationService");
 
         // An Android handler thread internally operates on a looper.
-        handlerThread = new HandlerThread("LocationService.HandlerThread");
-        handlerThread.start();
+        mHandlerThread = new HandlerThread("LocationService.HandlerThread");
+        mHandlerThread.start();
         // An Android service handler is a handler running on a specific background thread.
-        serviceHandler = new ServiceHandler(handlerThread.getLooper());
+        mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
 
-        dao = (DAOFactory.createLocationDAO(this));
+        mLocationDAO = (DAOFactory.createLocationDAO(this));
         mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getStringResource(SyncService.ACCOUNT_TYPE_RESOURCE));
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
@@ -221,9 +221,9 @@ public class LocationService extends Service {
             mProvider = null;
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            handlerThread.quitSafely();
+            mHandlerThread.quitSafely();
         } else {
-            handlerThread.quit(); //sorry
+            mHandlerThread.quit(); //sorry
         }
         unregisterReceiver(connectivityChangeReceiver);
 
@@ -511,7 +511,7 @@ public class LocationService extends Service {
 
     @Override
     public Intent registerReceiver(BroadcastReceiver receiver, IntentFilter filter) {
-        return super.registerReceiver(receiver, filter, null, serviceHandler);
+        return super.registerReceiver(receiver, filter, null, mServiceHandler);
     }
 
     @Override
@@ -529,7 +529,7 @@ public class LocationService extends Service {
     public Long persistLocation (BackgroundLocation location) {
         Long locationId = -1L;
         try {
-            locationId = dao.persistLocationWithLimit(location, mConfig.getMaxLocations());
+            locationId = mLocationDAO.persistLocationWithLimit(location, mConfig.getMaxLocations());
             location.setLocationId(locationId);
             logger.debug("Persisted location: {}", location.toString());
         } catch (SQLException e) {
@@ -541,7 +541,7 @@ public class LocationService extends Service {
 
     public void syncLocation(BackgroundLocation location) {
         if (mConfig.hasValidSyncUrl()) {
-            Long locationsCount = dao.locationsForSyncCount(System.currentTimeMillis());
+            Long locationsCount = mLocationDAO.locationsForSyncCount(System.currentTimeMillis());
             logger.debug("Location to sync: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
             if (locationsCount >= mConfig.getSyncThreshold()) {
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
@@ -551,7 +551,7 @@ public class LocationService extends Service {
     }
 
     public void postLocation(BackgroundLocation location) {
-        if (hasConnectivity && mConfig.hasValidUrl()) {
+        if (mHasConnectivity && mConfig.hasValidUrl()) {
             PostLocationTask task = new LocationService.PostLocationTask();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                 task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, location);
@@ -616,7 +616,7 @@ public class LocationService extends Service {
             try {
                 responseCode = HttpPostService.postJSON(url, jsonLocations, config.getHttpHeaders());
             } catch (Exception e) {
-                hasConnectivity = isNetworkAvailable();
+                mHasConnectivity = isNetworkAvailable();
                 logger.warn("Error while posting locations: {}", e.getMessage());
                 return false;
             }
@@ -629,7 +629,7 @@ public class LocationService extends Service {
             for (BackgroundLocation location : locations) {
                 Long locationId = location.getLocationId();
                 if (locationId != null) {
-                    dao.deleteLocation(locationId);
+                    mLocationDAO.deleteLocation(locationId);
                 }
             }
 
@@ -641,12 +641,10 @@ public class LocationService extends Service {
      * Broadcast receiver which detects connectivity change condition
      */
     private BroadcastReceiver connectivityChangeReceiver = new BroadcastReceiver() {
-        private static final String LOG_TAG = "NetworkChangeReceiver";
-
         @Override
         public void onReceive(Context context, Intent intent) {
-            hasConnectivity = isNetworkAvailable();
-            logger.info("Network condition changed hasConnectivity: {}", hasConnectivity);
+            mHasConnectivity = isNetworkAvailable();
+            logger.info("Network condition changed has connectivity: {}", mHasConnectivity);
         }
     };
 

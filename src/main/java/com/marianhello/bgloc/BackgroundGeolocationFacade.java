@@ -55,7 +55,7 @@ public class BackgroundGeolocationFacade {
     private Messenger mService = null;
     /** Flag indicating whether we have called bind on the service. */
     private Boolean mIsBound = false;
-    private Boolean locationModeChangeReceiverRegistered = false;
+    private Boolean mLocationModeChangeReceiverRegistered = false;
     private Config mConfig = null;
     private PluginDelegate mDelegate;
     private String mHeadlessJsFunction;
@@ -82,7 +82,7 @@ public class BackgroundGeolocationFacade {
             if (!mIsBound) {
                 safeBindService();
             }
-            if (!locationModeChangeReceiverRegistered) {
+            if (!mLocationModeChangeReceiverRegistered) {
                 registerLocationModeChangeReceiver();
             }
         }
@@ -207,20 +207,20 @@ public class BackgroundGeolocationFacade {
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
     private void registerLocationModeChangeReceiver () {
-        if (locationModeChangeReceiverRegistered) return;
+        if (mLocationModeChangeReceiverRegistered) return;
 
         getContext().registerReceiver(locationModeChangeReceiver, new IntentFilter(LocationManager.MODE_CHANGED_ACTION));
-        locationModeChangeReceiverRegistered = true;
+        mLocationModeChangeReceiverRegistered = true;
     }
 
     private void unregisterLocationModeChangeReceiver () {
-        if (locationModeChangeReceiverRegistered == false) return;
+        if (mLocationModeChangeReceiverRegistered == false) return;
 
         Context context = getContext();
         if (context != null) {
             context.unregisterReceiver(locationModeChangeReceiver);
         }
-        locationModeChangeReceiverRegistered = false;
+        mLocationModeChangeReceiverRegistered = false;
     }
 
     public void start() throws JSONException {
@@ -269,7 +269,7 @@ public class BackgroundGeolocationFacade {
             if (!mIsBound) {
                 safeBindService();
             }
-            if (!locationModeChangeReceiverRegistered) {
+            if (!mLocationModeChangeReceiverRegistered) {
                 registerLocationModeChangeReceiver();
             }
         }
