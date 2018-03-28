@@ -328,7 +328,14 @@ public class BackgroundGeolocationFacade {
     }
 
     public boolean locationServicesEnabled() throws SettingNotFoundException {
-        return locationServicesEnabled(getContext());
+        Context context = getContext();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            int locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
+            return locationMode != Settings.Secure.LOCATION_MODE_OFF;
+        } else {
+            String locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+            return !TextUtils.isEmpty(locationProviders);
+        }
     }
 
     public void registerHeadlessTask(String jsFunction) {
@@ -516,15 +523,5 @@ public class BackgroundGeolocationFacade {
             }
         }
         return true;
-    }
-
-    private static boolean locationServicesEnabled(Context context) throws SettingNotFoundException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            int locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
-            return locationMode != Settings.Secure.LOCATION_MODE_OFF;
-        } else {
-            String locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
-            return !TextUtils.isEmpty(locationProviders);
-        }
     }
 }
