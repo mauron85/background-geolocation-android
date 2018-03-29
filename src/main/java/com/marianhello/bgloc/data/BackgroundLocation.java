@@ -737,26 +737,37 @@ public class BackgroundLocation implements Parcelable {
     public Object getValueForKey(String key) {
         if ("@id".equals(key)) {
             return locationId;
-        } else if ("@provider".equals(key)) {
+        }
+        if ("@provider".equals(key)) {
             return provider;
-        } else if ("@locationProvider".equals(key)) {
+        }
+        if ("@locationProvider".equals(key)) {
             return locationProvider;
-        } else if ("@time".equals(key)) {
+        }
+        if ("@time".equals(key)) {
             return time;
-        } else if ("@latitude".equals(key)) {
+        }
+        if ("@latitude".equals(key)) {
             return latitude;
-        } else if ("@longitude".equals(key)) {
+        }
+        if ("@longitude".equals(key)) {
             return longitude;
-        } else if ("@accuracy".equals(key)) {
-            return accuracy;
-        } else if ("@speed".equals(key)) {
-            return speed;
-        } else if ("@altitude".equals(key)) {
-            return altitude;
-        } else if ("@bearing".equals(key)) {
-            return bearing;
-        } else if ("@radius".equals(key)) {
-            return radius;
+        }
+        if ("@accuracy".equals(key)) {
+            return hasAccuracy ? accuracy : JSONObject.NULL;
+        }
+        if ("@speed".equals(key)) {
+            return hasSpeed ? speed : JSONObject.NULL;
+        }
+        if ("@altitude".equals(key)) {
+            return hasAltitude ? altitude : JSONObject.NULL;
+        }
+        if ("@bearing".equals(key)) {
+            return hasBearing ? bearing : JSONObject.NULL;
+        }
+        if ("@radius".equals(key)) {
+            return hasRadius ?radius : JSONObject.NULL;
+        }
         }
 
         return null;
