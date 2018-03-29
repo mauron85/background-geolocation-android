@@ -45,6 +45,8 @@ import com.marianhello.bgloc.headless.HeadlessTaskRunner;
 import com.marianhello.bgloc.headless.LocationTask;
 import com.marianhello.bgloc.headless.StationaryTask;
 import com.marianhello.bgloc.headless.Task;
+import com.marianhello.bgloc.provider.LocationProvider;
+import com.marianhello.bgloc.provider.LocationProviderFactory;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;

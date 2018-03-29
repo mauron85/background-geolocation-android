@@ -1,4 +1,4 @@
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.provider;
 
 import android.content.Context;
 import android.location.Criteria;
@@ -7,6 +7,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 
+import com.marianhello.bgloc.Config;
+import com.marianhello.bgloc.LocationService;
 import com.marianhello.logging.LoggerManager;
 
 /**

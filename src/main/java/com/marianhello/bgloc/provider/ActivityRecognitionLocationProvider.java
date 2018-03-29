@@ -1,4 +1,4 @@
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.provider;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -18,6 +18,8 @@ import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.marianhello.bgloc.Config;
+import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.logging.LoggerManager;
 

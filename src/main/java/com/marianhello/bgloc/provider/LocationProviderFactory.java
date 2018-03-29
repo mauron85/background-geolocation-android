@@ -7,13 +7,14 @@ https://github.com/christocracy/cordova-plugin-background-geolocation
 This is a new class
 */
 
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.provider;
 
-import android.content.Context;
-import com.marianhello.bgloc.data.DAOFactory;
-import com.marianhello.bgloc.LocationProvider;
+import com.marianhello.bgloc.Config;
+import com.marianhello.bgloc.LocationService;
+import com.marianhello.bgloc.provider.LocationProvider;
+import com.marianhello.bgloc.provider.RawLocationProvider;
 import com.tenforwardconsulting.bgloc.DistanceFilterLocationProvider;
-import com.marianhello.bgloc.ActivityRecognitionLocationProvider;
+import com.marianhello.bgloc.provider.ActivityRecognitionLocationProvider;
 import java.lang.IllegalArgumentException;
 
 /**

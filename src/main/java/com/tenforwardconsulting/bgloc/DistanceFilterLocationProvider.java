@@ -12,7 +12,6 @@ Differences to original version:
 package com.tenforwardconsulting.bgloc;
 
 import android.app.AlarmManager;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -25,7 +24,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.PowerManager;
 
-import com.marianhello.bgloc.AbstractLocationProvider;
+import com.marianhello.bgloc.provider.AbstractLocationProvider;
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.LocationService;
 import com.marianhello.logging.LoggerManager;

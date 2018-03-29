@@ -7,9 +7,8 @@ https://github.com/christocracy/cordova-plugin-background-geolocation
 This is a new class
 */
 
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.provider;
 
-import android.app.Activity;
 import android.location.Location;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -19,6 +18,9 @@ import android.media.ToneGenerator;
 import android.widget.Toast;
 
 import com.google.android.gms.location.DetectedActivity;
+import com.marianhello.bgloc.Config;
+import com.marianhello.bgloc.LocationService;
+import com.marianhello.bgloc.PluginError;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.utils.Tone;

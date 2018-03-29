@@ -7,7 +7,9 @@ https://github.com/christocracy/cordova-plugin-background-geolocation
 This is a new class
 */
 
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.provider;
+
+import com.marianhello.bgloc.Config;
 
 /**
  * LocationProvider interface
