@@ -8,7 +8,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.LocationService;
 import com.marianhello.logging.LoggerManager;
 
 /**
@@ -16,12 +15,11 @@ import com.marianhello.logging.LoggerManager;
  */
 
 public class RawLocationProvider extends AbstractLocationProvider implements LocationListener {
-    private org.slf4j.Logger logger;
     private LocationManager locationManager;
     private boolean isStarted = false;
 
-    public RawLocationProvider(LocationService locationService, Config config) {
-        super(locationService, config);
+    public RawLocationProvider(Context context) {
+        super(context);
         PROVIDER_ID = Config.RAW_PROVIDER;
     }
 
@@ -29,10 +27,7 @@ public class RawLocationProvider extends AbstractLocationProvider implements Loc
     public void onCreate() {
         super.onCreate();
 
-        logger = LoggerManager.getLogger(RawLocationProvider.class);
-        logger.debug("Creating RawLocationProvider");
-
-        locationManager = (LocationManager) mLocationService.getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
     }
 
     @Override
@@ -76,7 +71,7 @@ public class RawLocationProvider extends AbstractLocationProvider implements Loc
 
     @Override
     public void onConfigure(Config config) {
-        mConfig = config;
+        super.onConfigure(config);
         if (isStarted) {
             onStop();
             onStart();

@@ -47,6 +47,7 @@ import com.marianhello.bgloc.headless.StationaryTask;
 import com.marianhello.bgloc.headless.Task;
 import com.marianhello.bgloc.provider.LocationProvider;
 import com.marianhello.bgloc.provider.LocationProviderFactory;
+import com.marianhello.bgloc.provider.ProviderDelegate;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;
@@ -58,7 +59,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Iterator;
 
-public class LocationService extends Service {
+public class LocationService extends Service implements ProviderDelegate {
 
     /** Keeps track of all current registered clients. */
     HashMap<Integer, Messenger> mClients = new HashMap();
@@ -268,8 +269,12 @@ public class LocationService extends Service {
 
         logger.debug("Will start service with: {}", mConfig.toString());
 
-        LocationProviderFactory spf = new LocationProviderFactory(this, mConfig);
+        LocationProviderFactory spf = new LocationProviderFactory(this);
         mProvider = spf.getInstance(mConfig.getLocationProvider());
+        mProvider.setDelegate(this);
+        mProvider.onCreate();
+        mProvider.onConfigure(mConfig);
+        mProvider.onStart();
 
         if (mConfig.getStartForeground()) {
             Notification notification = new NotificationFactory().getNotification(
@@ -281,8 +286,6 @@ public class LocationService extends Service {
             startForeground(NOTIF_ID, notification);
         }
 
-        mProvider.onCreate();
-        mProvider.onStart();
         isRunning = true;
 
         //We want this service to continue running until it is explicitly stopped
@@ -381,9 +384,11 @@ public class LocationService extends Service {
         if (currentConfig.getLocationProvider() != mConfig.getLocationProvider()) {
             boolean shouldStart = mProvider.isStarted();
             mProvider.onDestroy();
-            LocationProviderFactory spf = new LocationProviderFactory(this, mConfig);
+            LocationProviderFactory spf = new LocationProviderFactory(this);
             mProvider = spf.getInstance(mConfig.getLocationProvider());
+            mProvider.setDelegate(this);
             mProvider.onCreate();
+            mProvider.onConfigure(mConfig);
             if (shouldStart) {
                 mProvider.onStart();
             }
@@ -420,7 +425,7 @@ public class LocationService extends Service {
      *
      * @param location
      */
-    public void handleLocation(BackgroundLocation location) {
+    public void onLocation(BackgroundLocation location) {
         logger.debug("New location {}", location.toString());
 
         location.setBatchStartMillis(System.currentTimeMillis() + ONE_MINUTE_IN_MILLIS); // prevent sync of not yet posted location
@@ -447,7 +452,7 @@ public class LocationService extends Service {
         });
     }
 
-    public void handleStationary(BackgroundLocation location) {
+    public void onStationary(BackgroundLocation location) {
         logger.debug("New stationary {}", location.toString());
 
         location.setBatchStartMillis(System.currentTimeMillis() + ONE_MINUTE_IN_MILLIS); // prevent sync of not yet posted location
@@ -474,7 +479,7 @@ public class LocationService extends Service {
         });
     }
 
-    public void handleActivity(BackgroundActivity activity) {
+    public void onActivity(BackgroundActivity activity) {
         logger.debug("New activity {}", activity.toString());
 
         Bundle bundle = new Bundle();
@@ -521,7 +526,7 @@ public class LocationService extends Service {
         super.unregisterReceiver(receiver);
     }
 
-    public void handleError(PluginError error) {
+    public void onError(PluginError error) {
         Message msg = Message.obtain(null, MSG_ERROR);
         msg.setData(error.toBundle());
         sendClientMessage(msg);

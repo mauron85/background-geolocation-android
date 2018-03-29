@@ -22,5 +22,6 @@ public interface LocationProvider {
     void onStop();
     void onSwitchMode(int mode);
     void onConfigure(Config config);
+    void setDelegate(ProviderDelegate delegate);
     boolean isStarted();
 }

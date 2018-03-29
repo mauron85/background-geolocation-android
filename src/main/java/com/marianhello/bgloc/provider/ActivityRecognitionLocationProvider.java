@@ -19,9 +19,7 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.data.BackgroundActivity;
-import com.marianhello.logging.LoggerManager;
 
 import java.util.ArrayList;
 
@@ -42,10 +40,8 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     private Location lastLocation;
     private DetectedActivity lastActivity = new DetectedActivity(DetectedActivity.UNKNOWN, 100);
 
-    private org.slf4j.Logger logger;
-
-    public ActivityRecognitionLocationProvider(LocationService locationService, Config config) {
-        super(locationService, config);
+    public ActivityRecognitionLocationProvider(Context context) {
+        super(context);
         PROVIDER_ID = Config.ACTIVITY_PROVIDER;
     }
 
@@ -53,15 +49,12 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     public void onCreate() {
         super.onCreate();
 
-        logger = LoggerManager.getLogger(ActivityRecognitionLocationProvider.class);
-        logger.info("Creating ActivityRecognitionLocationProvider");
-
-        PowerManager pm = (PowerManager) mLocationService.getSystemService(Context.POWER_SERVICE);
+        PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
         wakeLock.acquire();
 
         Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE);
-        detectedActivitiesPI = PendingIntent.getBroadcast(mLocationService, 9002, detectedActivitiesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         registerReceiver(detectedActivitiesReceiver, new IntentFilter(DETECTED_ACTIVITY_UPDATE));
     }
 
@@ -82,7 +75,7 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
 
     @Override
     public void onConfigure(Config config) {
-        mConfig = config;
+        super.onConfigure(config);
         if (isStarted) {
             onStop();
             onStart();
@@ -138,7 +131,7 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
 
     private void connectToPlayAPI() {
         logger.debug("Connecting to Google Play Services");
-        googleApiClient =  new GoogleApiClient.Builder(mLocationService)
+        googleApiClient =  new GoogleApiClient.Builder(mContext)
                 .addApi(LocationServices.API)
                 .addApi(ActivityRecognition.API)
                 .addConnectionCallbacks(this)

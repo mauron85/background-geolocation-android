@@ -24,9 +24,8 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.PowerManager;
 
-import com.marianhello.bgloc.provider.AbstractLocationProvider;
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.LocationService;
+import com.marianhello.bgloc.provider.AbstractLocationProvider;
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.utils.Tone;
 
@@ -74,12 +73,10 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     private LocationManager locationManager;
     private AlarmManager alarmManager;
 
-    private org.slf4j.Logger logger;
-
     private boolean isStarted = false;
 
-    public DistanceFilterLocationProvider(LocationService locationService, Config config) {
-        super(locationService, config);
+    public DistanceFilterLocationProvider(Context context) {
+        super(context);
         PROVIDER_ID = Config.DISTANCE_FILTER_PROVIDER;
     }
 
@@ -87,29 +84,26 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     public void onCreate() {
         super.onCreate();
 
-        logger = LoggerManager.getLogger(DistanceFilterLocationProvider.class);
-        logger.info("Creating DistanceFilterLocationProvider");
-
-        locationManager = (LocationManager) mLocationService.getSystemService(Context.LOCATION_SERVICE);
-        alarmManager = (AlarmManager) mLocationService.getSystemService(Context.ALARM_SERVICE);
+        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        alarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
 
         // Stop-detection PI
-        stationaryAlarmPI = PendingIntent.getBroadcast(mLocationService, 0, new Intent(STATIONARY_ALARM_ACTION), 0);
+        stationaryAlarmPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_ALARM_ACTION), 0);
         registerReceiver(stationaryAlarmReceiver, new IntentFilter(STATIONARY_ALARM_ACTION));
 
         // Stationary region PI
-        stationaryRegionPI = PendingIntent.getBroadcast(mLocationService, 0, new Intent(STATIONARY_REGION_ACTION), PendingIntent.FLAG_CANCEL_CURRENT);
+        stationaryRegionPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_REGION_ACTION), PendingIntent.FLAG_CANCEL_CURRENT);
         registerReceiver(stationaryRegionReceiver, new IntentFilter(STATIONARY_REGION_ACTION));
 
         // Stationary location monitor PI
-        stationaryLocationPollingPI = PendingIntent.getBroadcast(mLocationService, 0, new Intent(STATIONARY_LOCATION_MONITOR_ACTION), 0);
+        stationaryLocationPollingPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_LOCATION_MONITOR_ACTION), 0);
         registerReceiver(stationaryLocationMonitorReceiver, new IntentFilter(STATIONARY_LOCATION_MONITOR_ACTION));
 
         // One-shot PI (TODO currently unused)
-        singleUpdatePI = PendingIntent.getBroadcast(mLocationService, 0, new Intent(SINGLE_LOCATION_UPDATE_ACTION), PendingIntent.FLAG_CANCEL_CURRENT);
+        singleUpdatePI = PendingIntent.getBroadcast(mContext, 0, new Intent(SINGLE_LOCATION_UPDATE_ACTION), PendingIntent.FLAG_CANCEL_CURRENT);
         registerReceiver(singleUpdateReceiver, new IntentFilter(SINGLE_LOCATION_UPDATE_ACTION));
 
-        PowerManager pm = (PowerManager) mLocationService.getSystemService(Context.POWER_SERVICE);
+        PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
         wakeLock.acquire();
 
@@ -160,7 +154,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
 
     @Override
     public void onConfigure(Config config) {
-        mConfig = config;
+        super.onConfigure(config);
         if (isStarted) {
             onStop();
             onStart();

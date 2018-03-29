@@ -9,20 +9,21 @@ This is a new class
 
 package com.marianhello.bgloc.provider;
 
-import android.location.Location;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.BroadcastReceiver;
+import android.location.Location;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.widget.Toast;
 
 import com.google.android.gms.location.DetectedActivity;
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.PluginError;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
+import com.marianhello.logging.LoggerManager;
 import com.marianhello.utils.Tone;
 
 /**
@@ -31,14 +32,18 @@ import com.marianhello.utils.Tone;
 public abstract class AbstractLocationProvider implements LocationProvider {
 
     protected Integer PROVIDER_ID;
-    protected LocationService mLocationService;
     protected Config mConfig;
+    protected Context mContext;
 
     protected ToneGenerator toneGenerator;
+    protected org.slf4j.Logger logger;
 
-    protected AbstractLocationProvider(LocationService locationService, Config config) {
-        this.mLocationService = locationService;
-        this.mConfig = config;
+    private ProviderDelegate mDelegate;
+
+    protected AbstractLocationProvider(Context context) {
+        mContext = context;
+        logger = LoggerManager.getLogger(getClass());
+        logger.info("Creating {}", getClass().getSimpleName());
     }
 
     @Override
@@ -62,12 +67,16 @@ public abstract class AbstractLocationProvider implements LocationProvider {
         // override in child class
     }
 
+    public void setDelegate(ProviderDelegate delegate) {
+        mDelegate = delegate;
+    }
+
     /**
      * Register broadcast reciever
      * @param receiver
      */
     protected Intent registerReceiver (BroadcastReceiver receiver, IntentFilter filter) {
-        return mLocationService.registerReceiver(receiver, filter);
+        return mContext.registerReceiver(receiver, filter);
     }
 
     /**
@@ -75,7 +84,7 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      * @param receiver
      */
     protected void unregisterReceiver (BroadcastReceiver receiver) {
-        mLocationService.unregisterReceiver(receiver);
+        mContext.unregisterReceiver(receiver);
     }
 
     /**
@@ -84,7 +93,9 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      */
     protected void handleLocation (Location location) {
         playDebugTone(Tone.BEEP);
-        mLocationService.handleLocation(new BackgroundLocation(PROVIDER_ID, location));
+        if (mDelegate != null) {
+            mDelegate.onLocation(new BackgroundLocation(PROVIDER_ID, location));
+        }
     }
 
     /**
@@ -95,7 +106,9 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      */
     protected void handleStationary (Location location, float radius) {
         playDebugTone(Tone.LONG_BEEP);
-        mLocationService.handleStationary(new BackgroundLocation(PROVIDER_ID, location, radius));
+        if (mDelegate != null) {
+            mDelegate.onStationary(new BackgroundLocation(PROVIDER_ID, location, radius));
+        }
     }
 
     /**
@@ -105,11 +118,15 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      */
     protected void handleStationary (Location location) {
         playDebugTone(Tone.LONG_BEEP);
-        mLocationService.handleStationary(new BackgroundLocation(PROVIDER_ID, location));
+        if (mDelegate != null) {
+            mDelegate.onStationary(new BackgroundLocation(PROVIDER_ID, location));
+        }
     }
 
     protected void handleActivity(DetectedActivity activity) {
-        mLocationService.handleActivity(new BackgroundActivity(PROVIDER_ID, activity));
+        if (mDelegate != null) {
+            mDelegate.onActivity(new BackgroundActivity(PROVIDER_ID, activity));
+        }
     }
 
     /**
@@ -118,12 +135,14 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      */
     protected void handleSecurityException (SecurityException exception) {
         PluginError error = new PluginError(PluginError.PERMISSION_DENIED_ERROR, exception.getMessage());
-        mLocationService.handleError(error);
+        if (mDelegate != null) {
+            mDelegate.onError(error);
+        }
     }
 
     protected void showDebugToast (String text) {
         if (mConfig.isDebugging()) {
-            Toast.makeText(mLocationService, text, Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
         }
     }
 

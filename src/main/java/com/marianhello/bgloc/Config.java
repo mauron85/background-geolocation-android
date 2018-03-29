@@ -14,7 +14,6 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.marianhello.bgloc.data.AbstractLocationTemplate;
-import com.marianhello.bgloc.data.HashMapLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
 
