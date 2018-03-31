@@ -580,7 +580,7 @@ public class LocationService extends Service {
 //    }
 
     private void runHeadlessTask(Task task) {
-        if (hasBoundClients) { // only run headless task if there are no bound clients (activity)
+        if (mHasBoundClients) { // only run headless task if there are no bound clients (activity)
             return;
         }
 
