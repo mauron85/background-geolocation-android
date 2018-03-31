@@ -31,7 +31,7 @@ public class BackgroundLocation implements Parcelable {
     private boolean hasSpeed = false;
     private boolean hasBearing = false;
     private boolean hasRadius = false;
-    private boolean isFromMockProvider = false;
+    private int mockFlags = 0x0000;
     private boolean isValid = true;
     private Bundle extras = null;
 
@@ -58,7 +58,7 @@ public class BackgroundLocation implements Parcelable {
             elapsedRealtimeNanos = location.getElapsedRealtimeNanos();
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            isFromMockProvider = location.isFromMockProvider();
+            setIsFromMockProvider(location.isFromMockProvider());
         }
     }
 
@@ -108,7 +108,7 @@ public class BackgroundLocation implements Parcelable {
         hasSpeed = l.hasSpeed;
         hasBearing = l.hasBearing;
         hasRadius = l.hasRadius;
-        isFromMockProvider = l.isFromMockProvider;
+        mockFlags = l.mockFlags;
         isValid = l.isValid;
         extras = (l.extras == null) ? null : new Bundle(l.extras);
     }
@@ -132,7 +132,7 @@ public class BackgroundLocation implements Parcelable {
         hasSpeed = in.readInt() != 0;
         hasBearing = in.readInt() != 0;
         hasRadius = in.readInt() != 0;
-        isFromMockProvider = in.readInt() != 0;
+        mockFlags = in.readInt();
         isValid = in.readInt() != 0;
         extras = in.readBundle();
     }
@@ -162,7 +162,7 @@ public class BackgroundLocation implements Parcelable {
         dest.writeInt(hasSpeed ? 1 : 0);
         dest.writeInt(hasBearing ? 1 : 0);
         dest.writeInt(hasRadius ? 1 : 0);
-        dest.writeInt(isFromMockProvider ? 1 : 0);
+        dest.writeInt(mockFlags);
         dest.writeInt(isValid ? 1 : 0);
         dest.writeBundle(extras);
     }
@@ -176,7 +176,7 @@ public class BackgroundLocation implements Parcelable {
             return new BackgroundLocation[size];
         }
     };
-    
+
     public BackgroundLocation makeClone() {
         return new BackgroundLocation(this);
     }
@@ -499,14 +499,82 @@ public class BackgroundLocation implements Parcelable {
     }
 
     /**
+     * Mock flags is 4-bit representation of mock status
+     *
+     * xxx0 - isFromMockProvider is false
+     * xxx1 - isFromMockProvider is true
+     * xx0x - hasIsFromMockProvider is false
+     * xx1x - hasIsFromMockProvider is true
+     * x0xx - areMockLocationsEnabled is false
+     * x1xx - areMockLocationsEnabled is true
+     * 0xxx - hasMockLocationsEnabled is false
+     * 1xxx - hasMockLocationsEnabled is true
+     *
+     * @return mock flags
+     */
+    public int getMockFlags() {
+        return mockFlags;
+    }
+
+    public void setMockFlags(int mockFlags) {
+        this.mockFlags = mockFlags;
+    }
+
+    /**
+     * Return true if method setIsFromMockProvider was called on location instance
+     * @return true indicates that result from isFromMockProvider method is valid
+     */
+    public boolean hasIsFromMockProvider() {
+        return ((mockFlags & 0x0002) >> 1) == 1;
+    }
+
+    /**
      * Returns true if the Location came from a mock provider.
+     * Always check hasIsFromMockProvider() before this method
      *
      * @return true if this Location came from a mock provider, false otherwise
      */
     public boolean isFromMockProvider() {
-        return isFromMockProvider;
+        return (mockFlags & 0x0001) == 1;
     }
 
+    /**
+     * Method should be called to indicate that location was recorded by mock provider
+     * If this method was called hasIsFromMockProvider method will always return true
+     *
+     * @param isFromMockProvider
+     */
+    public void setIsFromMockProvider(boolean isFromMockProvider) {
+        mockFlags |= isFromMockProvider ? 0x0003 : 0x0002;
+    }
+
+    /**
+     * Return true if method setMockLocationsEnabled was called on location instance
+     * @return true indicates that result from areMockLocationsEnabled method is valid
+     */
+    public boolean hasMockLocationsEnabled() {
+        return ((mockFlags & 0x0008) >> 3) == 1;
+    }
+
+    /**
+     * Returns true if mock locations were enabled
+     * Always check hasMockLocationsEnabled() before this method
+     *
+     * @return true if mock locations were enabled
+     */
+    public boolean areMockLocationsEnabled() {
+        return ((mockFlags & 0x0004) >> 2) == 1;
+    }
+
+    /**
+     * Method should be called when mock locations were detect in settings
+     * If this method was called hasMockLocationsEnabled method will always return true
+     *
+     * @param mockLocationsEnabled
+     */
+    public void setMockLocationsEnabled(Boolean mockLocationsEnabled) {
+        mockFlags |= mockLocationsEnabled ? 0x000C : 0x0008;
+    }
 
     /**
      * Returns true if location is considered valid.
@@ -691,7 +759,8 @@ public class BackgroundLocation implements Parcelable {
         if (hasSpeed) s.append(" vel=").append(speed);
         if (hasBearing) s.append(" bear=").append(bearing);
         if (hasRadius) s.append(" radius=").append(radius);
-        if (isFromMockProvider) s.append(" mock");
+        if (isFromMockProvider()) s.append(" mock");
+        if (areMockLocationsEnabled()) s.append(" mocksEnabled");
         if (extras != null) {
             s.append(" {").append(extras).append('}');
         }
@@ -717,6 +786,8 @@ public class BackgroundLocation implements Parcelable {
         if (hasAltitude) json.put("altitude", altitude);
         if (hasBearing) json.put("bearing", bearing);
         if (hasRadius) json.put("radius", radius);
+        if (hasIsFromMockProvider()) json.put("isFromMockProvider", isFromMockProvider());
+        if (hasMockLocationsEnabled()) json.put("mockLocationsEnabled", areMockLocationsEnabled());
 
         return json;
   	}
@@ -729,7 +800,7 @@ public class BackgroundLocation implements Parcelable {
      * @throws JSONException
      */
     public JSONObject toJSONObjectWithId() throws JSONException {
-        JSONObject json = this.toJSONObject();
+        JSONObject json = toJSONObject();
         json.put("id", locationId);
         return json;
     }
@@ -768,6 +839,11 @@ public class BackgroundLocation implements Parcelable {
         if ("@radius".equals(key)) {
             return hasRadius ?radius : JSONObject.NULL;
         }
+        if ("@isFromMockProvider".equals(key)) {
+            return hasIsFromMockProvider() ? isFromMockProvider() : JSONObject.NULL;
+        }
+        if ("@mockLocationsEnabled".equals(key)) {
+            return hasMockLocationsEnabled() ? areMockLocationsEnabled() : JSONObject.NULL;
         }
 
         return null;

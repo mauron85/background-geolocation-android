@@ -127,17 +127,24 @@ public class SQLiteOpenHelperTest {
         cursor = db.query(SQLiteLocationContract.LocationEntry.TABLE_NAME, null, null, null, null, null, null);
         columnNames = Arrays.asList(cursor.getColumnNames());
 
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_ACCURACY)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_ALTITUDE)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_BEARING)));
-        Assert.assertTrue(columnNames.contains(("debug")));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LATITUDE)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LONGITUDE)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_PROVIDER)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_SPEED)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_ACCURACY)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_SPEED)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_BEARING)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_ALTITUDE)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LATITUDE)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LONGITUDE)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_RADIUS)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ACCURACY)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_SPEED)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_BEARING)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ALTITUDE)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_PROVIDER)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_VALID)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS)));
 
         cursor.close();
 

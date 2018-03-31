@@ -14,7 +14,7 @@ import java.util.ArrayList;
 public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
     private static final String TAG = SQLiteOpenHelper.class.getName();
     public static final String SQLITE_DATABASE_NAME = "cordova_bg_geolocation.db";
-    public static final int DATABASE_VERSION = 13;
+    public static final int DATABASE_VERSION = 14;
 
     private static final String TEXT_TYPE = " TEXT";
     private static final String INTEGER_TYPE = " INTEGER";
@@ -40,7 +40,8 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
         LocationEntry.COLUMN_NAME_PROVIDER + TEXT_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_LOCATION_PROVIDER + INTEGER_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_VALID + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + INTEGER_TYPE +
+        LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + INTEGER_TYPE + COMMA_SEP +
+        LocationEntry.COLUMN_NAME_MOCK_FLAGS + INTEGER_TYPE +
         " )";
 
     private static final String SQL_CREATE_CONFIG_TABLE =
@@ -161,8 +162,11 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
             case 12:
                 alterSql.add("ALTER TABLE " + ConfigurationEntry.TABLE_NAME +
                         " ADD COLUMN " + ConfigurationEntry.COLUMN_NAME_TEMPLATE + TEXT_TYPE);
+            case 13:
+                alterSql.add("ALTER TABLE " + LocationEntry.TABLE_NAME +
+                        " ADD COLUMN " + LocationEntry.COLUMN_NAME_MOCK_FLAGS + INTEGER_TYPE);
 
-                break;
+                break; // DO NOT FORGET TO MOVE DOWN BREAK ON DB UPGRADE!!!
             default:
                 onDowngrade(db, 0, 0);
                 return;

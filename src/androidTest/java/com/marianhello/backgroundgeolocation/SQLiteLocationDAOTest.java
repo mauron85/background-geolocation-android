@@ -65,6 +65,32 @@ public class SQLiteLocationDAOTest {
         Assert.assertEquals(20, storedLocation.getSpeed(), 0);
         Assert.assertEquals("test", storedLocation.getProvider(), "test");
         Assert.assertEquals(1000, storedLocation.getTime(), 0);
+        Assert.assertFalse(storedLocation.hasMockLocationsEnabled());
+        Assert.assertFalse(storedLocation.areMockLocationsEnabled());
+        Assert.assertTrue(storedLocation.hasIsFromMockProvider()); // because setIsFromMockProvider is called in constructor
+        Assert.assertFalse(storedLocation.isFromMockProvider());
+    }
+
+    @Test
+    public void persistLocationIsMock() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation bgLocation = new BackgroundLocation();
+        bgLocation.setMockLocationsEnabled(true);
+        bgLocation.setIsFromMockProvider(true);
+
+        dao.persistLocation(bgLocation);
+
+        ArrayList<BackgroundLocation> locations = new ArrayList(dao.getAllLocations());
+        Assert.assertEquals(1, locations.size());
+
+        BackgroundLocation storedLocation = locations.get(0);
+        Assert.assertTrue(storedLocation.hasMockLocationsEnabled());
+        Assert.assertTrue(storedLocation.areMockLocationsEnabled());
+        Assert.assertTrue(storedLocation.hasIsFromMockProvider());
+        Assert.assertTrue(storedLocation.isFromMockProvider());
     }
 
     @Test

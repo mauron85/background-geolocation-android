@@ -16,6 +16,7 @@ import android.content.IntentFilter;
 import android.location.Location;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.provider.Settings;
 import android.widget.Toast;
 
 import com.google.android.gms.location.DetectedActivity;
@@ -94,7 +95,9 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     protected void handleLocation (Location location) {
         playDebugTone(Tone.BEEP);
         if (mDelegate != null) {
-            mDelegate.onLocation(new BackgroundLocation(PROVIDER_ID, location));
+            BackgroundLocation bgLocation = new BackgroundLocation(PROVIDER_ID, location);
+            bgLocation.setMockLocationsEnabled(hasMockLocationsEnabled());
+            mDelegate.onLocation(bgLocation);
         }
     }
 
@@ -107,7 +110,10 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     protected void handleStationary (Location location, float radius) {
         playDebugTone(Tone.LONG_BEEP);
         if (mDelegate != null) {
-            mDelegate.onStationary(new BackgroundLocation(PROVIDER_ID, location, radius));
+            BackgroundLocation bgLocation = new BackgroundLocation(PROVIDER_ID, location);
+            bgLocation.setRadius(radius);
+            bgLocation.setMockLocationsEnabled(hasMockLocationsEnabled());
+            mDelegate.onStationary(bgLocation);
         }
     }
 
@@ -119,7 +125,9 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     protected void handleStationary (Location location) {
         playDebugTone(Tone.LONG_BEEP);
         if (mDelegate != null) {
-            mDelegate.onStationary(new BackgroundLocation(PROVIDER_ID, location));
+            BackgroundLocation bgLocation = new BackgroundLocation(PROVIDER_ID, location);
+            bgLocation.setMockLocationsEnabled(hasMockLocationsEnabled());
+            mDelegate.onStationary(bgLocation);
         }
     }
 
@@ -144,6 +152,10 @@ public abstract class AbstractLocationProvider implements LocationProvider {
         if (mConfig.isDebugging()) {
             Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
         }
+    }
+
+    public Boolean hasMockLocationsEnabled() {
+        return Settings.Secure.getString(mContext.getContentResolver(), android.provider.Settings.Secure.ALLOW_MOCK_LOCATION).equals("1");
     }
 
     /**

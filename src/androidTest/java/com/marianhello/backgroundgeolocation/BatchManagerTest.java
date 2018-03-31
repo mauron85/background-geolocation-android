@@ -155,6 +155,8 @@ public class BatchManagerTest {
             location.setLatitude(30.21 + i);
             location.setLongitude(13.45 + i);
             location.setBatchStartMillis(1000L);
+            location.setIsFromMockProvider(false);
+            location.setMockLocationsEnabled(true);
             dao.persistLocation(location);
         }
 
@@ -164,6 +166,9 @@ public class BatchManagerTest {
         list.add("@longitude");
         list.add("foo");
         list.add("bar");
+        list.add("@isFromMockProvider");
+        list.add("@mockLocationsEnabled");
+
         LocationTemplate template = new ArrayListLocationTemplate(list);
 
         ArrayList<HashMap> locations = new ArrayList();
@@ -181,6 +186,8 @@ public class BatchManagerTest {
                 hashLocation.put("longitude", reader.nextDouble());
                 hashLocation.put("foo", reader.nextString());
                 hashLocation.put("bar", reader.nextString());
+                hashLocation.put("isFromMockProvider", reader.nextBoolean());
+                hashLocation.put("mockLocationsEnabled", reader.nextBoolean());
                 reader.endArray();
                 locations.add(hashLocation);
             }
@@ -196,6 +203,8 @@ public class BatchManagerTest {
             Assert.assertEquals(13.45 + i, (Double) l.get("longitude"), 0);
             Assert.assertEquals("foo", (String) l.get("foo"));
             Assert.assertEquals("bar", (String) l.get("bar"));
+            Assert.assertEquals(false, l.get("isFromMockProvider"));
+            Assert.assertEquals(true, l.get("mockLocationsEnabled"));
             i++;
         }
     }
@@ -210,6 +219,8 @@ public class BatchManagerTest {
             location.setLatitude(30.21 + i);
             location.setLongitude(13.45 + i);
             location.setBatchStartMillis(1000L);
+            location.setIsFromMockProvider(true);
+            location.setMockLocationsEnabled(false);
             dao.persistLocation(location);
         }
 
@@ -219,6 +230,8 @@ public class BatchManagerTest {
         map.put("lon", "@longitude");
         map.put("foo", "bar");
         map.put("pretzels", 123);
+        map.put("isFromMockProvider", "@isFromMockProvider");
+        map.put("mockLocationsEnabled", "@mockLocationsEnabled");
         LocationTemplate template = new HashMapLocationTemplate(map);
 
         ArrayList<HashMap> locations = new ArrayList();
@@ -240,6 +253,10 @@ public class BatchManagerTest {
                         hashLocation.put(name, reader.nextDouble());
                     } else if ("foo".equals(name)) {
                         hashLocation.put(name, reader.nextString());
+                    } else if ("isFromMockProvider".equals(name)) {
+                        hashLocation.put(name, reader.nextBoolean());
+                    } else if ("mockLocationsEnabled".equals(name)) {
+                        hashLocation.put(name, reader.nextBoolean());
                     } else {
                         reader.skipValue();
                     }
@@ -258,6 +275,8 @@ public class BatchManagerTest {
             Assert.assertEquals(30.21 + i, (Double) l.get("lat"), 0);
             Assert.assertEquals(13.45 + i, (Double) l.get("lon"), 0);
             Assert.assertEquals("bar", (String) l.get("foo"));
+            Assert.assertEquals(true, l.get("isFromMockProvider"));
+            Assert.assertEquals(false, l.get("mockLocationsEnabled"));
             i++;
         }
     }

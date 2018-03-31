@@ -54,7 +54,8 @@ public class SQLiteLocationDAO implements LocationDAO {
       LocationEntry.COLUMN_NAME_HAS_RADIUS,
       LocationEntry.COLUMN_NAME_LOCATION_PROVIDER,
       LocationEntry.COLUMN_NAME_VALID,
-      LocationEntry.COLUMN_NAME_BATCH_START_MILLIS
+      LocationEntry.COLUMN_NAME_BATCH_START_MILLIS,
+      LocationEntry.COLUMN_NAME_MOCK_FLAGS
     };
 
     String groupBy = null;
@@ -200,7 +201,8 @@ public class SQLiteLocationDAO implements LocationDAO {
             .append(LocationEntry.COLUMN_NAME_HAS_RADIUS).append("= ?,")
             .append(LocationEntry.COLUMN_NAME_LOCATION_PROVIDER).append("= ?,")
             .append(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS).append("= ?,")
-            .append(LocationEntry.COLUMN_NAME_VALID).append("= ?")
+            .append(LocationEntry.COLUMN_NAME_VALID).append("= ?,")
+            .append(LocationEntry.COLUMN_NAME_MOCK_FLAGS).append("= ?")
             .append(" WHERE ").append(LocationEntry._ID)
             .append("= ?")
             .toString();
@@ -222,6 +224,7 @@ public class SQLiteLocationDAO implements LocationDAO {
             location.getLocationProvider(),
             location.getBatchStartMillis(),
             location.isValid() ? 1 : 0,
+            location.getMockFlags(),
             locationId
     });
 
@@ -285,6 +288,7 @@ public class SQLiteLocationDAO implements LocationDAO {
     l.setBatchStartMillis(c.getLong(c.getColumnIndex(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS)));
     l.setValid(c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_VALID)) != 0);
     l.setLocationId(c.getLong(c.getColumnIndex(LocationEntry._ID)));
+    l.setMockFlags(c.getInt((c.getColumnIndex(LocationEntry.COLUMN_NAME_MOCK_FLAGS))));
 
     return l;
   }
@@ -308,6 +312,7 @@ public class SQLiteLocationDAO implements LocationDAO {
     values.put(LocationEntry.COLUMN_NAME_LOCATION_PROVIDER, l.getLocationProvider());
     values.put(LocationEntry.COLUMN_NAME_VALID, l.isValid() ? 1 : 0);
     values.put(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS, l.getBatchStartMillis());
+    values.put(LocationEntry.COLUMN_NAME_MOCK_FLAGS, l.getMockFlags());
 
     return values;
   }

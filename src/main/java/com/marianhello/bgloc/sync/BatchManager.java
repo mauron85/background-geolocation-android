@@ -58,7 +58,8 @@ public class BatchManager {
                 SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_BEARING,
                 SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ALTITUDE,
                 SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER
+                SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER,
+                SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS
         };
 
         String whereClause = TextUtils.join("", new String[]{
@@ -114,6 +115,7 @@ public class BatchManager {
                 boolean hasSpeed = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_SPEED)) == 1;
                 boolean hasBearing = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_BEARING)) == 1;
                 boolean hasRadius = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS)) == 1;
+                int mockFlags = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS));
 
                 if (template instanceof HashMapLocationTemplate) {
                     writer.beginObject();
@@ -163,6 +165,20 @@ public class BatchManager {
                         } else if ("@radius".equals(value)) {
                             if (hasRadius) {
                                 writer.name(key).value(radius);
+                            } else {
+                                writer.name(key).nullValue();
+                            }
+                        } else if ("@isFromMockProvider".equals(value)) {
+                            boolean hasIsFromMockProvider = ((mockFlags & 0x0002) >> 1) == 1;
+                            if (hasIsFromMockProvider) {
+                                writer.name(key).value((mockFlags & 0x0001) == 1);
+                            } else {
+                                writer.name(key).nullValue();
+                            }
+                        } else if ("@mockLocationsEnabled".equals(value)) {
+                            boolean hasMockLocationsEnabled = ((mockFlags & 0x0008) >> 3) == 1;
+                            if (hasMockLocationsEnabled) {
+                                writer.name(key).value(((mockFlags & 0x0004) >> 2) == 1);
                             } else {
                                 writer.name(key).nullValue();
                             }
@@ -216,6 +232,20 @@ public class BatchManager {
                         } else if ("@radius".equals(key)) {
                             if (hasRadius) {
                                 writer.value(radius);
+                            } else {
+                                writer.nullValue();
+                            }
+                        } else if ("@isFromMockProvider".equals(key)) {
+                            boolean hasIsFromMockProvider = ((mockFlags & 0x0002) >> 1) == 1;
+                            if (hasIsFromMockProvider) {
+                                writer.value((mockFlags & 0x0001) == 1);
+                            } else {
+                                writer.nullValue();
+                            }
+                        } else if ("@mockLocationsEnabled".equals(key)) {
+                            boolean hasMockLocationsEnabled = ((mockFlags & 0x0008) >> 3) == 1;
+                            if (hasMockLocationsEnabled) {
+                                writer.value(((mockFlags & 0x0004) >> 2) == 1);
                             } else {
                                 writer.nullValue();
                             }
