@@ -102,7 +102,7 @@ public class LocationService extends Service implements ProviderDelegate {
     public static final int MSG_SWITCH_MODE = 6;
 
     /**
-     * Command to the service to that configuration has been changed
+     * Command to the service to indicate configuration has been changed
      */
     public static final int MSG_CONFIGURE = 7;
 
@@ -112,6 +112,9 @@ public class LocationService extends Service implements ProviderDelegate {
      */
     public static final int MSG_ON_ACTIVITY = 8;
 
+    /**
+     * Command to the service to register headless task
+     */
     public static final int MSG_REGISTER_HEADLESS_TASK = 9;
 
     /** indicate if service is running */
