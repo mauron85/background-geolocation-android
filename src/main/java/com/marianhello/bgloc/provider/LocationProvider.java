@@ -20,7 +20,7 @@ public interface LocationProvider {
     void onDestroy();
     void onStart();
     void onStop();
-    void onSwitchMode(int mode);
+    void onCommand(int mode);
     void onConfigure(Config config);
     void setDelegate(ProviderDelegate delegate);
     boolean isStarted();

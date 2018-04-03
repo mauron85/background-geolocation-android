@@ -282,6 +282,13 @@ public class BackgroundGeolocationFacade {
         serviceSend(msg);
     }
 
+    public void sendCommand(int commandId) {
+        Message msg = Message.obtain(null, LocationService.MSG_EXEC_COMMAND);
+        msg.replyTo = mMessenger;
+        msg.arg1 = commandId;
+        serviceSend(msg);
+    }
+
     public void configure(Config newConfig) {
         Config config;
 

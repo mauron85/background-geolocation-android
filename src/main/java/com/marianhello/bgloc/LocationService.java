@@ -99,9 +99,15 @@ public class LocationService extends Service implements ProviderDelegate {
     public static final int MSG_ON_STATIONARY = 5;
 
     /**
+     * Command to the active location provider
+     */
+    public static final int MSG_EXEC_COMMAND = 6;
+
+    /**
+     * @Deprecated use MSG_EXEC_COMMAND instead
      * Command to the service to indicate operation mode has been changed
      */
-    public static final int MSG_SWITCH_MODE = 6;
+    public static final int MSG_SWITCH_MODE = MSG_EXEC_COMMAND;
 
     /**
      * Command to the service to indicate configuration has been changed
@@ -165,8 +171,8 @@ public class LocationService extends Service implements ProviderDelegate {
                 case MSG_UNREGISTER_CLIENT:
                     mClients.remove(msg.arg1);
                     break;
-                case MSG_SWITCH_MODE:
-                    switchMode(msg.arg1);
+                case MSG_EXEC_COMMAND:
+                    sendCommand(msg.arg1);
                     break;
                 case MSG_CONFIGURE:
                     configure(msg.getData());
@@ -349,8 +355,8 @@ public class LocationService extends Service implements ProviderDelegate {
         }
     }
 
-    private void switchMode(int mode) {
-        mProvider.onSwitchMode(mode);
+    private void sendCommand(int mode) {
+        mProvider.onCommand(mode);
     }
 
     private void configure(Config config) {

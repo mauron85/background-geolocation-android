@@ -144,7 +144,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     }
 
 //    @Override
-//    public void onSwitchMode(int mode) {
+//    public void onCommand(int mode) {
 //        if (mode == BackgroundGeolocationFacade.BACKGROUND_MODE) {
 //            setPace(false);
 //        } else if (mode == BackgroundGeolocationFacade.FOREGROUND_MODE) {
