@@ -1,31 +1,36 @@
 package com.marianhello.bgloc;
 
-import android.app.Application;
+import android.content.Context;
 
 /**
  * Created by finch on 19/07/16.
  */
 public class ResourceResolver {
 
-    private Application app;
+    private Context mContext;
 
-    private ResourceResolver(Application app) {
-        this.app = app;
+    private ResourceResolver(Context context) {
+        mContext = context;
+    }
+
+    private Context getApplicationContext() {
+        return mContext.getApplicationContext();
     }
 
     public int getAppResource(String name, String type) {
-        return app.getResources().getIdentifier(name, type, app.getPackageName());
+        Context appContext = getApplicationContext();
+        return appContext.getResources().getIdentifier(name, type, appContext.getPackageName());
     }
 
-    public Integer getDrawableResource(String resourceName) {
+    public Integer getDrawable(String resourceName) {
         return getAppResource(resourceName, "drawable");
     }
 
-    public String getStringResource(String name) {
-        return app.getString(getAppResource(name, "string"));
+    public String getString(String name) {
+        return getApplicationContext().getString(getAppResource(name, "string"));
     }
 
-    public static ResourceResolver newInstance(Application app) {
-        return new ResourceResolver(app);
+    public static ResourceResolver newInstance(Context context) {
+        return new ResourceResolver(context);
     }
 }

@@ -22,6 +22,7 @@ import android.content.IntentFilter;
 import android.database.SQLException;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -123,11 +124,10 @@ public class LocationService extends Service implements ProviderDelegate {
 
     /** notification id */
     private static int NOTIF_ID = 1;
-    /** notification channel id */
-    private static String CHANNEL_ID = "bglocservice";
 
     private static final int ONE_MINUTE_IN_MILLIS = 1000 * 60;
 
+    private ResourceResolver mResolver;
     private LocationDAO mLocationDAO;
     private Config mConfig;
     private LocationProvider mProvider;
@@ -216,20 +216,14 @@ public class LocationService extends Service implements ProviderDelegate {
         // An Android service handler is a handler running on a specific background thread.
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
 
+        mResolver = ResourceResolver.newInstance(this);
+
         mLocationDAO = (DAOFactory.createLocationDAO(this));
-        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME, getStringResource(SyncService.ACCOUNT_TYPE_RESOURCE));
+        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME,
+                mResolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel, but only on API 26+ because
-            // the NotificationChannel class is new and not in the support library
-            String appName = getStringResource("app_name");
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, appName, NotificationManager.IMPORTANCE_DEFAULT);
-            // Register the channel with the system
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.createNotificationChannel(channel);
-        }
+        NotificationHelper.registerServiceChannel(this);
     }
 
     @Override
@@ -309,18 +303,6 @@ public class LocationService extends Service implements ProviderDelegate {
         return START_STICKY;
     }
 
-    private int getAppResource(String name, String type) {
-        return getApplication().getResources().getIdentifier(name, type, getApplication().getPackageName());
-    }
-
-    private String getStringResource(String name) {
-        return getApplication().getString(getAppResource(name, "string"));
-    }
-
-    private Integer getDrawableResource(String resourceName) {
-        return getAppResource(resourceName, "drawable");
-    }
-
     private class NotificationFactory {
         private Integer parseNotificationIconColor(String color) {
             int iconColor = 0;
@@ -336,17 +318,17 @@ public class LocationService extends Service implements ProviderDelegate {
 
         public Notification getNotification(String title, String text, String largeIcon, String smallIcon, String color) {
             // Build a Notification required for running service in foreground.
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(LocationService.this, CHANNEL_ID);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(LocationService.this, NotificationHelper.SERVICE_CHANNEL_ID);
 
             builder.setContentTitle(title);
             builder.setContentText(text);
             if (smallIcon != null && !smallIcon.isEmpty()) {
-                builder.setSmallIcon(getDrawableResource(smallIcon));
+                builder.setSmallIcon(mResolver.getDrawable(smallIcon));
             } else {
                 builder.setSmallIcon(android.R.drawable.ic_menu_mylocation);
             }
             if (largeIcon != null && !largeIcon.isEmpty()) {
-                builder.setLargeIcon(BitmapFactory.decodeResource(getApplication().getResources(), getDrawableResource(largeIcon)));
+                builder.setLargeIcon(BitmapFactory.decodeResource(getApplication().getResources(), mResolver.getDrawable(largeIcon)));
             }
             if (color != null && !color.isEmpty()) {
                 builder.setColor(this.parseNotificationIconColor(color));
@@ -570,7 +552,7 @@ public class LocationService extends Service implements ProviderDelegate {
             logger.debug("Location to sync: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
             if (locationsCount >= mConfig.getSyncThreshold()) {
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mConfig.getSyncThreshold());
-                SyncService.sync(mSyncAccount, getStringResource(SyncService.AUTHORITY_TYPE_RESOURCE));
+                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE));
             }
         }
     }

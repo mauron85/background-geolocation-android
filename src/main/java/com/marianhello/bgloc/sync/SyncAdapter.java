@@ -1,14 +1,12 @@
 package com.marianhello.bgloc.sync;
 
 import android.accounts.Account;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SyncResult;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +14,7 @@ import android.support.v4.app.NotificationCompat;
 
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.HttpPostService;
+import com.marianhello.bgloc.NotificationHelper;
 import com.marianhello.bgloc.UploadingCallback;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
@@ -35,9 +34,6 @@ import java.util.HashMap;
 public class SyncAdapter extends AbstractThreadedSyncAdapter implements UploadingCallback {
 
     private static final int NOTIFICATION_ID = 666;
-    private static final String CHANNEL_ID = "syncservice";
-    private static final String CHANNEL_NAME = "Sync Service";
-    private static final String CHANNEL_DESCRIPTION = "Shows sync progress";
 
     ContentResolver contentResolver;
     private ConfigurationDAO configDAO;
@@ -76,14 +72,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         batchManager = new BatchManager(this.getContext());
         notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel, but only on API 26+ because
-            // the NotificationChannel class is new and not in the support library
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription(CHANNEL_DESCRIPTION);
-            // Register the channel with the system
-            notificationManager.createNotificationChannel(channel);
-        }
+        NotificationHelper.registerSyncChannel(context);
     }
 
     /*
@@ -146,7 +135,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
     }
 
     private boolean uploadLocations(File file, String url, HashMap httpHeaders) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), NotificationHelper.SYNC_CHANNEL_ID);
         builder.setOngoing(true);
         builder.setContentTitle("Syncing locations");
         builder.setContentText("Sync in progress");
@@ -188,7 +177,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
 
     public void uploadListener(int progress) {
         logger.debug("Syncing progress: {} updatedAt: {}", progress, System.currentTimeMillis());
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), NotificationHelper.SYNC_CHANNEL_ID);
         builder.setOngoing(true);
         builder.setContentTitle("Syncing locations");
         builder.setContentText("Sync in progress");
