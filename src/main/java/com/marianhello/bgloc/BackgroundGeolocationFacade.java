@@ -60,6 +60,7 @@ public class BackgroundGeolocationFacade {
     private PluginDelegate mDelegate;
     private String mHeadlessJsFunction;
     private int mMode = FOREGROUND_MODE;
+    private Object mLock = new Object();
 
     private BackgroundLocation mStationaryLocation;
 
@@ -282,26 +283,28 @@ public class BackgroundGeolocationFacade {
     public void configure(Config newConfig) {
         Config config;
 
-        try {
-            config = getConfig();
-        } catch (JSONException e) {
-            config = Config.getDefault();
-        }
+        synchronized (mLock) {
+            try {
+                config = getConfig();
+            } catch (JSONException e) {
+                config = Config.getDefault();
+            }
 
-        try {
-            config = Config.merge(config, newConfig);
-            persistConfiguration(config);
-            logger.debug("Service configured with: {}", config.toString());
-            mConfig = config;
+            try {
+                config = Config.merge(config, newConfig);
+                persistConfiguration(config);
+                logger.debug("Service configured with: {}", config.toString());
+                mConfig = config;
 
-            Message msg = Message.obtain(null,
-                    LocationService.MSG_CONFIGURE);
-            msg.setData(config.toBundle());
+                Message msg = Message.obtain(null,
+                        LocationService.MSG_CONFIGURE);
+                msg.setData(config.toBundle());
 
-            serviceSend(msg);
-        } catch (Exception e) {
-            logger.error("Configuration persist error: {}", e.getMessage());
-            mDelegate.onError(new PluginError(PluginError.CONFIGURE_ERROR, e.getMessage()));
+                serviceSend(msg);
+            } catch (Exception e) {
+                logger.error("Configuration persist error: {}", e.getMessage());
+                mDelegate.onError(new PluginError(PluginError.CONFIGURE_ERROR, e.getMessage()));
+            }
         }
     }
 
@@ -376,18 +379,20 @@ public class BackgroundGeolocationFacade {
 
         logger.info("Starting bg service");
         Context context = getContext();
-        Intent locationServiceIntent = new Intent(context, LocationService.class);
 
-        if (mConfig == null) {
-            logger.warn("Attempt to start unconfigured service. Will use stored or default.");
-            mConfig = getConfig();
+        synchronized (mLock) {
+            if (mConfig == null) {
+                logger.warn("Attempt to start unconfigured service. Will use stored or default.");
+                mConfig = getStoredOrDefaultConfig();
+            }
+
+            Intent locationServiceIntent = new Intent(context, LocationService.class);
+            locationServiceIntent.putExtra("config", mConfig);
+            locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
+            // start service to keep service running even if no clients are bound to it
+            context.startService(locationServiceIntent);
+            mDelegate.onLocationResume();
         }
-
-        locationServiceIntent.putExtra("config", mConfig);
-        locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
-        // start service to keep service running even if no clients are bound to it
-        context.startService(locationServiceIntent);
-        mDelegate.onLocationResume();
     }
 
     private void stopBackgroundService() {
