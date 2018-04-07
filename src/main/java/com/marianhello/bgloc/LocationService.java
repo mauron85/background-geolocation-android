@@ -11,18 +11,13 @@ package com.marianhello.bgloc;
 
 import android.accounts.Account;
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.SQLException;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -35,7 +30,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.support.v4.app.NotificationCompat;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
@@ -294,7 +288,7 @@ public class LocationService extends Service implements ProviderDelegate {
         mProvider.onStart();
 
         if (mConfig.getStartForeground()) {
-            Notification notification = new NotificationFactory().getNotification(
+            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
                     mConfig.getNotificationTitle(),
                     mConfig.getNotificationText(),
                     mConfig.getLargeNotificationIcon(),
@@ -307,52 +301,6 @@ public class LocationService extends Service implements ProviderDelegate {
 
         //We want this service to continue running until it is explicitly stopped
         return START_STICKY;
-    }
-
-    private class NotificationFactory {
-        private Integer parseNotificationIconColor(String color) {
-            int iconColor = 0;
-            if (color != null) {
-                try {
-                    iconColor = Color.parseColor(color);
-                } catch (IllegalArgumentException e) {
-                    logger.error("Couldn't parse color from android options");
-                }
-            }
-            return iconColor;
-        }
-
-        public Notification getNotification(String title, String text, String largeIcon, String smallIcon, String color) {
-            // Build a Notification required for running service in foreground.
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(LocationService.this, NotificationHelper.SERVICE_CHANNEL_ID);
-
-            builder.setContentTitle(title);
-            builder.setContentText(text);
-            if (smallIcon != null && !smallIcon.isEmpty()) {
-                builder.setSmallIcon(mResolver.getDrawable(smallIcon));
-            } else {
-                builder.setSmallIcon(android.R.drawable.ic_menu_mylocation);
-            }
-            if (largeIcon != null && !largeIcon.isEmpty()) {
-                builder.setLargeIcon(BitmapFactory.decodeResource(getApplication().getResources(), mResolver.getDrawable(largeIcon)));
-            }
-            if (color != null && !color.isEmpty()) {
-                builder.setColor(this.parseNotificationIconColor(color));
-            }
-
-            // Add an onclick handler to the notification
-            Context context = getApplicationContext();
-            String packageName = context.getPackageName();
-            Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent contentIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-            builder.setContentIntent(contentIntent);
-
-            Notification notification = builder.build();
-            notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE | Notification.FLAG_NO_CLEAR;
-
-            return notification;
-        }
     }
 
     private void sendCommand(int mode) {
@@ -372,7 +320,7 @@ public class LocationService extends Service implements ProviderDelegate {
         }
 
         if (mConfig.getStartForeground() == true) {
-            Notification notification = new NotificationFactory().getNotification(
+            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
                     mConfig.getNotificationTitle(),
                     mConfig.getNotificationText(),
                     mConfig.getLargeNotificationIcon(),

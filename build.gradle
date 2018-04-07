@@ -26,26 +26,29 @@ allprojects {
 android {
     compileSdkVersion 26
     buildToolsVersion "26.0.1"
+    publishNonDefault true
 
     defaultConfig {
         resValue "string", "content_authority", applicationId + '.provider'
         resValue "string", "account_type", applicationId
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         minSdkVersion 14
-        targetSdkVersion 23
         versionCode 1
         versionName "1.0"
+    }
+    productFlavors {
+        preoreo {
+            targetSdkVersion 23
+        }
+        oreo {
+            versionNameSuffix 'oreo'
+            targetSdkVersion 26
+        }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-    configurations.all {
-        resolutionStrategy {
-//            force 'com.android.support:support-annotations:23.1.1'
-//            force 'com.android.support:appcompat-v7:23+'
         }
     }
      compileOptions {
@@ -66,9 +69,9 @@ dependencies {
     androidTestCompile 'com.android.support.test:rules:0.5'
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    testCompile "org.json:json:20140107"
+    testCompile 'org.json:json:20140107'
     compile 'com.google.android.gms:play-services-location:11+'
-    compile 'com.android.support:support-compat:26+'
+    oreoCompile 'com.android.support:support-compat:26+'
 }
 
 apply from: './logtofile.gradle'
