@@ -30,6 +30,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.os.Process;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
@@ -210,8 +211,11 @@ public class LocationService extends Service implements ProviderDelegate {
         logger = LoggerManager.getLogger(LocationService.class);
         logger.info("Creating LocationService");
 
-        // An Android handler thread internally operates on a looper.
-        mHandlerThread = new HandlerThread("LocationService.HandlerThread");
+        // Start up the thread running the service.  Note that we create a
+        // separate thread because the service normally runs in the process's
+        // main thread, which we don't want to block.  We also make it
+        // background priority so CPU-intensive work will not disrupt our UI.
+        mHandlerThread = new HandlerThread("LocationService.HandlerThread", Process.THREAD_PRIORITY_BACKGROUND);
         mHandlerThread.start();
         // An Android service handler is a handler running on a specific background thread.
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
