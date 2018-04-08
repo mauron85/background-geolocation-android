@@ -60,7 +60,7 @@ public class BackgroundGeolocationFacade {
     private PluginDelegate mDelegate;
     private String mHeadlessJsFunction;
     private int mMode = FOREGROUND_MODE;
-    private Object mLock = new Object();
+    private final Object mLock = new Object();
 
     private BackgroundLocation mStationaryLocation;
 
