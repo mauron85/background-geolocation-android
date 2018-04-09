@@ -48,6 +48,7 @@ import com.marianhello.bgloc.provider.ProviderDelegate;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;
+import com.marianhello.logging.UncaughtExceptionLogger;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -208,6 +209,9 @@ public class LocationService extends Service implements ProviderDelegate {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        UncaughtExceptionLogger.register(this);
+
         logger = LoggerManager.getLogger(LocationService.class);
         logger.info("Creating LocationService");
 

@@ -17,8 +17,10 @@ import ch.qos.logback.core.android.CommonPathUtil;
 
 public class DBLogReader implements LogReader {
 
-    private DefaultDBNameResolver dbNameResolver;
-    private SQLiteDatabase db;
+    private static final String DB_FILENAME = "logback.db";
+
+    private DefaultDBNameResolver mDbNameResolver;
+    private SQLiteDatabase mDatabase;
 
     public Collection<LogEntry> getEntries(Integer limit) {
         try {
@@ -30,8 +32,11 @@ public class DBLogReader implements LogReader {
         return null;
     }
 
-    private Collection<LogEntry> getDbEntries(Integer limit) throws SQLException {
-        Collection<LogEntry> entries = new ArrayList<LogEntry>();
+
+    private SQLiteDatabase openDatabase() throws SQLException {
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
 
         String packageName = null;
         LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
@@ -44,49 +49,82 @@ public class DBLogReader implements LogReader {
             throw new SQLException("Cannot open database without package name");
         }
 
-        boolean dbOpened = false;
         try {
-            File dbfile = new File(CommonPathUtil.getDatabaseDirectoryPath(packageName), "logback.db");
-            db = SQLiteDatabase.openDatabase(dbfile.getPath(), null, SQLiteDatabase.OPEN_READONLY);
-            dbOpened = true;
+            File dbfile = new File(CommonPathUtil.getDatabaseDirectoryPath(packageName), DB_FILENAME);
+            mDatabase = SQLiteDatabase.openDatabase(dbfile.getPath(), null, SQLiteDatabase.OPEN_READONLY);
         } catch (SQLiteException e) {
             throw new SQLException("Cannot open database", e);
         }
 
+        return mDatabase;
+    }
+
+    private DefaultDBNameResolver getDbNameResolver() {
+        if (mDbNameResolver != null) {
+            return mDbNameResolver;
+        }
+
+        mDbNameResolver = new DefaultDBNameResolver();
+        return mDbNameResolver;
+    }
+
+    private Collection<String> getStackTrace(int logEntryId) throws SQLException {
+        Collection<String> stackTrace = new ArrayList();
+        SQLiteDatabase db = openDatabase();
         Cursor cursor = null;
-        if (dbOpened) {
-            try {
-                if (dbNameResolver == null) {
-                    dbNameResolver = new DefaultDBNameResolver();
+
+        try {
+            DefaultDBNameResolver dbNameResolver = getDbNameResolver();
+            String entrySQL = SQLBuilder.buildSelectExceptionSQL(dbNameResolver);
+            cursor = mDatabase.rawQuery(entrySQL, new String[] { String.valueOf(logEntryId) });
+            while (cursor.moveToNext()) {
+                stackTrace.add(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.TRACE_LINE))));
+            }
+        } catch (SQLiteException e) {
+            throw new SQLException("Cannot retrieve log entries", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return stackTrace;
+    }
+
+    private Collection<LogEntry> getDbEntries(Integer limit) throws SQLException {
+        Collection<LogEntry> entries = new ArrayList<LogEntry>();
+        SQLiteDatabase db = openDatabase();
+        Cursor cursor = null;
+
+        try {
+            DefaultDBNameResolver dbNameResolver = getDbNameResolver();
+            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver);
+            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(limit) });
+            while (cursor.moveToNext()) {
+                LogEntry entry = new LogEntry();
+                entry.setContext(0);
+                entry.setId(cursor.getInt(0));
+                entry.setLevel(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.LEVEL_STRING))));
+                entry.setMessage(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.FORMATTED_MESSAGE))));
+                entry.setTimestamp(cursor.getLong(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.TIMESTMP))));
+                entry.setLoggerName(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.LOGGER_NAME))));
+                if ("ERROR".equals(entry.getLevel())) {
+                    entry.setStackTrace(getStackTrace(entry.getId()));
                 }
-                String sql = com.marianhello.logging.SQLBuilder.buildSelectSQL(dbNameResolver);
-                cursor = db.rawQuery(sql, new String[] { String.valueOf(limit) });
-                while (cursor.moveToNext()) {
-                    entries.add(hydrate(cursor));
-                }
-            } catch (SQLiteException e) {
-                throw new SQLException("Cannot retrieve log entries", e);
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-                if (db != null) {
-                    db.close();
-                }
+                entries.add(entry);
+            }
+        } catch (SQLiteException e) {
+            throw new SQLException("Cannot retrieve log entries", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+            if (db != null) {
+                db.close();
             }
         }
 
         return entries;
     }
 
-    private LogEntry hydrate(Cursor c) {
-        LogEntry entry = new LogEntry();
-        entry.setContext(0);
-        entry.setLevel(c.getString(c.getColumnIndex(dbNameResolver.getColumnName(ColumnName.LEVEL_STRING))));
-        entry.setMessage(c.getString(c.getColumnIndex(dbNameResolver.getColumnName(ColumnName.FORMATTED_MESSAGE))));
-        entry.setTimestamp(c.getLong(c.getColumnIndex(dbNameResolver.getColumnName(ColumnName.TIMESTMP))));
-        entry.setLoggerName(c.getString(c.getColumnIndex(dbNameResolver.getColumnName(ColumnName.LOGGER_NAME))));
-
-        return entry;
-    }
 }

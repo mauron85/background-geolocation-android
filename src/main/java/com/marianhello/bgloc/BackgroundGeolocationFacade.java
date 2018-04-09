@@ -34,6 +34,7 @@ import com.marianhello.logging.DBLogReader;
 import com.marianhello.logging.LogEntry;
 import com.marianhello.logging.LogReader;
 import com.marianhello.logging.LoggerManager;
+import com.marianhello.logging.UncaughtExceptionLogger;
 
 import org.json.JSONException;
 
@@ -69,6 +70,8 @@ public class BackgroundGeolocationFacade {
     Messenger mMessenger;
 
     public BackgroundGeolocationFacade(PluginDelegate delegate) {
+        UncaughtExceptionLogger.register(delegate.getContext());
+
         mDelegate = delegate;
 
         logger = LoggerManager.getLogger(BackgroundGeolocationFacade.class);
