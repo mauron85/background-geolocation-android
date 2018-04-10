@@ -1,5 +1,12 @@
 package com.marianhello.logging;
 
+import android.text.TextUtils;
+
+import org.slf4j.event.Level;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import ch.qos.logback.classic.db.names.ColumnName;
 import ch.qos.logback.classic.db.names.DBNameResolver;
 import ch.qos.logback.classic.db.names.TableName;
@@ -7,7 +14,22 @@ import ch.qos.logback.classic.db.names.TableName;
 public class SQLBuilder {
     private static final String COL_SEPARATOR = ", ";
 
-    public static String buildSelectSQL(DBNameResolver dbNameResolver) {
+    /**
+     * Generate list of levels that are same or above provided level
+     * @param level
+     * @return comma separated list of levels that are same or above level
+     */
+    private static String aboveLevel(Level level) {
+        List<String> levels = new ArrayList();
+        for (Level l : Level.values()) {
+            if (level.compareTo(l) >= 0) {
+                levels.add("'" + l.toString() + "'");
+            }
+        }
+        return TextUtils.join(",", levels);
+    }
+
+    public static String buildSelectSQL(DBNameResolver dbNameResolver, Level minLevel) {
         StringBuilder sqlBuilder = new StringBuilder("SELECT ")
                 .append("ROWID").append(COL_SEPARATOR)
                 .append(dbNameResolver.getColumnName(ColumnName.EVENT_ID)).append(COL_SEPARATOR)
@@ -26,8 +48,11 @@ public class SQLBuilder {
                 .append(dbNameResolver.getColumnName(ColumnName.CALLER_METHOD)).append(COL_SEPARATOR)
                 .append(dbNameResolver.getColumnName(ColumnName.CALLER_LINE))
                 .append(" FROM ").append(dbNameResolver.getTableName(TableName.LOGGING_EVENT))
+                .append(" WHERE ").append(dbNameResolver.getColumnName(ColumnName.LEVEL_STRING))
+                    .append(" IN (")
+                    .append(aboveLevel(minLevel)).append(")")
                 .append(" ORDER BY ").append(dbNameResolver.getColumnName(ColumnName.TIMESTMP))
-                .append(" DESC LIMIT ?");
+                .append(" DESC LIMIT ? OFFSET ?");
         return sqlBuilder.toString();
     }
 
@@ -44,8 +69,8 @@ public class SQLBuilder {
         StringBuilder sqlBuilder = new StringBuilder("SELECT ")
             .append(dbNameResolver.getColumnName(ColumnName.TRACE_LINE))
             .append(" FROM ").append(dbNameResolver.getTableName(TableName.LOGGING_EVENT_EXCEPTION))
-            .append(" ORDER BY ").append(dbNameResolver.getColumnName(ColumnName.I))
-            .append(" WHERE ").append(dbNameResolver.getColumnName(ColumnName.EVENT_ID)).append(" = ?");
+            .append(" WHERE ").append(dbNameResolver.getColumnName(ColumnName.EVENT_ID)).append(" = ?")
+            .append(" ORDER BY ").append(dbNameResolver.getColumnName(ColumnName.I));
         return sqlBuilder.toString();
     }
 }

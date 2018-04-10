@@ -4,6 +4,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 
+import org.slf4j.event.Level;
+
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -15,23 +17,22 @@ import ch.qos.logback.classic.db.names.DefaultDBNameResolver;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.android.CommonPathUtil;
 
-public class DBLogReader implements LogReader {
+public class DBLogReader {
 
     private static final String DB_FILENAME = "logback.db";
 
     private DefaultDBNameResolver mDbNameResolver;
     private SQLiteDatabase mDatabase;
 
-    public Collection<LogEntry> getEntries(Integer limit) {
+    public Collection<LogEntry> getEntries(int limit, int offset, Level minLevel) {
         try {
-            return getDbEntries(limit);
+            return getDbEntries(limit, offset, minLevel);
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return null;
     }
-
 
     private SQLiteDatabase openDatabase() throws SQLException {
         if (mDatabase != null && mDatabase.isOpen()) {
@@ -91,15 +92,15 @@ public class DBLogReader implements LogReader {
         return stackTrace;
     }
 
-    private Collection<LogEntry> getDbEntries(Integer limit) throws SQLException {
+    private Collection<LogEntry> getDbEntries(int limit, int offset, Level minLevel) throws SQLException {
         Collection<LogEntry> entries = new ArrayList<LogEntry>();
         SQLiteDatabase db = openDatabase();
         Cursor cursor = null;
 
         try {
             DefaultDBNameResolver dbNameResolver = getDbNameResolver();
-            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver);
-            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(limit) });
+            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver, minLevel);
+            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(limit), String.valueOf(offset) });
             while (cursor.moveToNext()) {
                 LogEntry entry = new LogEntry();
                 entry.setContext(0);

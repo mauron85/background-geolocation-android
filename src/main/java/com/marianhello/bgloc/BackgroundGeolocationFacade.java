@@ -32,11 +32,11 @@ import com.marianhello.bgloc.data.LocationDAO;
 import com.marianhello.bgloc.headless.HeadlessTaskRunner;
 import com.marianhello.logging.DBLogReader;
 import com.marianhello.logging.LogEntry;
-import com.marianhello.logging.LogReader;
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.logging.UncaughtExceptionLogger;
 
 import org.json.JSONException;
+import org.slf4j.event.Level;
 
 import java.util.Collection;
 
@@ -334,8 +334,13 @@ public class BackgroundGeolocationFacade {
     }
 
     public Collection<LogEntry> getLogEntries(int limit) {
-        LogReader logReader = new DBLogReader();
-        return logReader.getEntries(limit);
+        DBLogReader logReader = new DBLogReader();
+        return logReader.getEntries(limit, 0, Level.DEBUG);
+    }
+
+    public Collection<LogEntry> getLogEntries(int limit, int offset, String minLevel) {
+        DBLogReader logReader = new DBLogReader();
+        return logReader.getEntries(limit, offset, Level.valueOf(minLevel));
     }
 
     public int getAuthorizationStatus() throws SettingNotFoundException {
