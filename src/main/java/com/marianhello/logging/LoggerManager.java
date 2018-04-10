@@ -17,15 +17,8 @@ import ch.qos.logback.core.util.StatusPrinter;
 public class LoggerManager {
 
     public static final String SQLITE_APPENDER_NAME = "sqlite";
-    public static final String ROLLING_FILE_APPENDER_NAME = "rolling";
-    public static final String LOG_DIR = "logs";
-    public static final String LOG_FILE_NAME = "plugin.log";
-    public static final String ARCHIVE_FILE_NAME_PATTERN = "plugin.%d{yyyy-MM-dd}.log";
-    public static final String LOG_FILE_PATTERN = "%d{ISO8601} %-5level %logger{0} - %msg%n";
 
     static {
-//        BasicLogcatConfigurator.configureDefaultContext();
-
         // reset the default context (which may already have been initialized)
         // since we want to reconfigure it
         LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
@@ -62,51 +55,9 @@ public class LoggerManager {
         }
     }
 
-    public static void enableRollingFileLogging() {
-        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        if (root.getAppender(ROLLING_FILE_APPENDER_NAME) == null) {
-            LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
-
-            RollingFileAppender appender = new RollingFileAppender();
-            appender.setName(ROLLING_FILE_APPENDER_NAME);
-            appender.setAppend(true);
-            appender.setContext(context);
-            appender.setFile(LOG_DIR + File.separator + LOG_FILE_NAME);
-
-            TimeBasedRollingPolicy<ILoggingEvent> policy = new TimeBasedRollingPolicy<ILoggingEvent>();
-            policy.setFileNamePattern(LOG_DIR + File.separator + ARCHIVE_FILE_NAME_PATTERN);
-            policy.setMaxHistory(7); //keep 7 days' worth of history
-            policy.setParent(appender);
-            policy.setContext(context);
-            policy.setCleanHistoryOnStart(true);
-            policy.start();
-
-            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-            encoder.setPattern(LOG_FILE_PATTERN);
-            encoder.setContext(context);
-            encoder.start();
-
-            appender.setTriggeringPolicy(policy);
-            appender.setEncoder(encoder);
-            appender.start();
-            root.addAppender(appender);
-
-            StatusPrinter.print(context);
-        }
-    }
-
     public static void disableDBLogging() {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         Appender<ILoggingEvent> appender = root.getAppender(SQLITE_APPENDER_NAME);
-        if (appender != null) {
-            appender.stop();
-            root.detachAppender(appender);
-        }
-    }
-
-    public static void disableRollingFileLogging() {
-        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        Appender<ILoggingEvent> appender = root.getAppender(ROLLING_FILE_APPENDER_NAME);
         if (appender != null) {
             appender.stop();
             root.detachAppender(appender);
