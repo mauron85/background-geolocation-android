@@ -30,6 +30,9 @@ public class LoggerManager {
         // since we want to reconfigure it
         LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
         context.reset();
+        // Disable class packaging data
+        // @see https://github.com/tony19/logback-android/issues/171
+        context.setPackagingDataEnabled(false);
 
         PatternLayoutEncoder encoder = new PatternLayoutEncoder();
         encoder.setContext(context);
