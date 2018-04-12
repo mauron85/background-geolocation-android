@@ -486,6 +486,7 @@ public class BackgroundGeolocationFacade {
     }
 
     private void runOnUiThread(Runnable runnable) {
+        if (getActivity() == null) return;
         getActivity().runOnUiThread(runnable);
     }
 

@@ -424,7 +424,10 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         }
         playDebugTone(Tone.BEEP);
 
-        float distance = abs(location.distanceTo(stationaryLocation) - stationaryLocation.getAccuracy() - location.getAccuracy());
+        float distance = 0.0f;
+        if (stationaryLocation != null) {
+            distance = abs(location.distanceTo(stationaryLocation) - stationaryLocation.getAccuracy() - location.getAccuracy());
+        }
 
         showDebugToast("Stationary exit in " + (stationaryRadius-distance) + "m");
 
