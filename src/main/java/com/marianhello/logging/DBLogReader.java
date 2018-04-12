@@ -99,8 +99,8 @@ public class DBLogReader {
 
         try {
             DefaultDBNameResolver dbNameResolver = getDbNameResolver();
-            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver, minLevel);
-            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(limit), String.valueOf(offset) });
+            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver, minLevel, limit < 0);
+            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(Math.abs(limit)), String.valueOf(offset) });
             while (cursor.moveToNext()) {
                 LogEntry entry = new LogEntry();
                 entry.setContext(0);

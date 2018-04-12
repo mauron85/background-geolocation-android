@@ -29,7 +29,7 @@ public class SQLBuilder {
         return TextUtils.join(",", levels);
     }
 
-    public static String buildSelectSQL(DBNameResolver dbNameResolver, Level minLevel) {
+    public static String buildSelectSQL(DBNameResolver dbNameResolver, Level minLevel, boolean sortAscending) {
         StringBuilder sqlBuilder = new StringBuilder("SELECT ")
                 .append("ROWID").append(COL_SEPARATOR)
                 .append(dbNameResolver.getColumnName(ColumnName.EVENT_ID)).append(COL_SEPARATOR)
@@ -52,7 +52,8 @@ public class SQLBuilder {
                     .append(" IN (")
                     .append(aboveLevel(minLevel)).append(")")
                 .append(" ORDER BY ").append(dbNameResolver.getColumnName(ColumnName.TIMESTMP))
-                .append(" DESC LIMIT ? OFFSET ?");
+                .append(" ").append(sortAscending ? "ASC" : "DESC")
+                .append(" LIMIT ? OFFSET ?");
         return sqlBuilder.toString();
     }
 
