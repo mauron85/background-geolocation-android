@@ -423,9 +423,12 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
             return;
         }
         playDebugTone(Tone.BEEP);
-
-        float distance = abs(location.distanceTo(stationaryLocation) - stationaryLocation.getAccuracy() - location.getAccuracy());
-
+        
+        float distance = 0.0f;
+        if (stationaryLocation != null) {
+            distance = abs(location.distanceTo(stationaryLocation) - stationaryLocation.getAccuracy() - location.getAccuracy());
+        }
+        
         showDebugToast("Stationary exit in " + (stationaryRadius-distance) + "m");
 
         // TODO http://www.cse.buffalo.edu/~demirbas/publications/proximity.pdf
