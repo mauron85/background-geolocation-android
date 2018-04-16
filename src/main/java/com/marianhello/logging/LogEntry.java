@@ -84,7 +84,7 @@ public class LogEntry {
 
     public JSONObject toJSONObject() throws JSONException {
         JSONObject json = new JSONObject();
-        json.put("rowid", this.id);
+        json.put("id", this.id);
         json.put("context", this.context);
         json.put("level", this.level);
         json.put("message", this.message);

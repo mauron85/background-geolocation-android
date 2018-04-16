@@ -4,6 +4,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 
+import com.marianhello.sqlbuilder.SqlExpression;
+import com.marianhello.sqlbuilder.SqlSelectStatement;
+
 import org.slf4j.event.Level;
 
 import java.io.File;
@@ -13,20 +16,90 @@ import java.util.Collection;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.db.names.ColumnName;
+import ch.qos.logback.classic.db.names.DBNameResolver;
 import ch.qos.logback.classic.db.names.DefaultDBNameResolver;
+import ch.qos.logback.classic.db.names.TableName;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.android.CommonPathUtil;
 
 public class DBLogReader {
 
-    private static final String DB_FILENAME = "logback.db";
+    public static final String DB_FILENAME = "logback.db";
 
     private DefaultDBNameResolver mDbNameResolver;
     private SQLiteDatabase mDatabase;
 
-    public Collection<LogEntry> getEntries(int limit, int offset, Level minLevel) {
+    public static class QueryBuilder {
+        DBNameResolver mDbNameResolver;
+
+        public QueryBuilder() {
+            mDbNameResolver = new DefaultDBNameResolver();
+        }
+
+        public QueryBuilder(DBNameResolver dbNameResolver) {
+            mDbNameResolver = dbNameResolver;
+        }
+
+        /**
+         * Generate array of levels that are same or above provided level
+         *
+         * @param level
+         * @return array of levels that are same or above level
+         */
+        private Object[] aboveLevel(Level level) {
+            ArrayList<String> levels = new ArrayList();
+            for (Level l : Level.values()) {
+                if (level.compareTo(l) >= 0) {
+                    levels.add(l.toString());
+                }
+            }
+            return levels.toArray();
+        }
+
+        public String buildStackTraceQuery(int eventId) {
+            SqlSelectStatement builder = new SqlSelectStatement();
+            builder.column(mDbNameResolver.getColumnName(ColumnName.TRACE_LINE));
+            builder.from(mDbNameResolver.getTableName(TableName.LOGGING_EVENT_EXCEPTION));
+            builder.where(mDbNameResolver.getColumnName(ColumnName.I), SqlExpression.SqlOperatorEqualTo, Integer.valueOf(eventId));
+            builder.orderBy(mDbNameResolver.getColumnName(ColumnName.I));
+
+            return builder.statement();
+        }
+
+        public String buildQuery(int limit, int fromLogEntryId, Level minLevel) {
+            SqlSelectStatement builder = new SqlSelectStatement();
+            builder.columns(new String[]{
+                    mDbNameResolver.getColumnName(ColumnName.EVENT_ID),
+                    mDbNameResolver.getColumnName(ColumnName.TIMESTMP),
+                    mDbNameResolver.getColumnName(ColumnName.FORMATTED_MESSAGE),
+                    mDbNameResolver.getColumnName(ColumnName.LOGGER_NAME),
+                    mDbNameResolver.getColumnName(ColumnName.LEVEL_STRING),
+            });
+            builder.from(mDbNameResolver.getTableName(TableName.LOGGING_EVENT));
+            builder.where(mDbNameResolver.getColumnName(ColumnName.LEVEL_STRING), SqlExpression.SqlOperatorIn, aboveLevel(minLevel));
+            if (fromLogEntryId > 0) {
+                if (limit >= 0) {
+                    builder.where(mDbNameResolver.getColumnName(ColumnName.EVENT_ID), SqlExpression.SqlOperatorLessThan, fromLogEntryId);
+                } else {
+                    builder.where(mDbNameResolver.getColumnName(ColumnName.EVENT_ID), SqlExpression.SqlOperatorGreaterThan, fromLogEntryId);
+                }
+            }
+            if (limit < 0) {
+                builder.orderBy(mDbNameResolver.getColumnName(ColumnName.TIMESTMP));
+                builder.orderBy(mDbNameResolver.getColumnName(ColumnName.EVENT_ID));
+            } else {
+                builder.orderBy(mDbNameResolver.getColumnName(ColumnName.TIMESTMP), true);
+                builder.orderBy(mDbNameResolver.getColumnName(ColumnName.EVENT_ID), true);
+            }
+            builder.limit(limit);
+
+            return builder.statement();
+        }
+    }
+
+    public Collection<LogEntry> getEntries(int limit, int fromLogEntryId, Level minLevel) {
         try {
-            return getDbEntries(limit, offset, minLevel);
+            return getDbEntries(limit, fromLogEntryId, minLevel);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -76,8 +149,8 @@ public class DBLogReader {
 
         try {
             DefaultDBNameResolver dbNameResolver = getDbNameResolver();
-            String entrySQL = SQLBuilder.buildSelectExceptionSQL(dbNameResolver);
-            cursor = mDatabase.rawQuery(entrySQL, new String[] { String.valueOf(logEntryId) });
+            QueryBuilder qb = new QueryBuilder(dbNameResolver);
+            cursor = mDatabase.rawQuery(qb.buildStackTraceQuery(logEntryId), new String[] {});
             while (cursor.moveToNext()) {
                 stackTrace.add(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.TRACE_LINE))));
             }
@@ -92,19 +165,19 @@ public class DBLogReader {
         return stackTrace;
     }
 
-    private Collection<LogEntry> getDbEntries(int limit, int offset, Level minLevel) throws SQLException {
+    private Collection<LogEntry> getDbEntries(int limit, int fromLogEntryId, Level minLevel) throws SQLException {
         Collection<LogEntry> entries = new ArrayList<LogEntry>();
         SQLiteDatabase db = openDatabase();
         Cursor cursor = null;
 
         try {
             DefaultDBNameResolver dbNameResolver = getDbNameResolver();
-            String entrySQL = SQLBuilder.buildSelectSQL(dbNameResolver, minLevel, limit < 0);
-            cursor = db.rawQuery(entrySQL, new String[] { String.valueOf(Math.abs(limit)), String.valueOf(offset) });
+            QueryBuilder qb = new QueryBuilder(dbNameResolver);
+            cursor = db.rawQuery(qb.buildQuery(limit, fromLogEntryId, minLevel), new String[] {});
             while (cursor.moveToNext()) {
                 LogEntry entry = new LogEntry();
                 entry.setContext(0);
-                entry.setId(cursor.getInt(0));
+                entry.setId(cursor.getInt(cursor.getColumnIndex(mDbNameResolver.getColumnName(ColumnName.EVENT_ID))));
                 entry.setLevel(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.LEVEL_STRING))));
                 entry.setMessage(cursor.getString(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.FORMATTED_MESSAGE))));
                 entry.setTimestamp(cursor.getLong(cursor.getColumnIndex(dbNameResolver.getColumnName(ColumnName.TIMESTMP))));
@@ -127,5 +200,4 @@ public class DBLogReader {
 
         return entries;
     }
-
 }
