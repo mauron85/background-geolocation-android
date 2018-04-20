@@ -1,6 +1,7 @@
 package com.marianhello.bgloc;
 
 import android.Manifest;
+import android.accounts.Account;
 import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -29,6 +30,8 @@ import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
 import com.marianhello.bgloc.headless.HeadlessTaskRunner;
+import com.marianhello.bgloc.sync.AccountHelper;
+import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.DBLogReader;
 import com.marianhello.logging.LogEntry;
 import com.marianhello.logging.LoggerManager;
@@ -344,6 +347,20 @@ public class BackgroundGeolocationFacade {
     public Collection<LogEntry> getLogEntries(int limit, int offset, String minLevel) {
         DBLogReader logReader = new DBLogReader();
         return logReader.getEntries(limit, offset, Level.valueOf(minLevel));
+    }
+
+    /**
+     * Force location sync
+     *
+     * Method is ignoring syncThreshold and also user sync settings preference
+     * and sync locations to defined syncUrl
+     */
+    public void forceSync() {
+        logger.debug("Sync locations forced");
+        ResourceResolver resolver = ResourceResolver.newInstance(getContext());
+        Account syncAccount = AccountHelper.CreateSyncAccount(getContext(), SyncService.ACCOUNT_NAME,
+                resolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
+        SyncService.sync(syncAccount, resolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), true);
     }
 
     public int getAuthorizationStatus() throws SettingNotFoundException {

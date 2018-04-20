@@ -99,12 +99,14 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
             return;
         }
 
-        logger.debug("Sync request: {}", config.toString());
         Long batchStartMillis = System.currentTimeMillis();
+        boolean isForced = extras.getBoolean(ContentResolver.SYNC_EXTRAS_MANUAL);
+        int syncThreshold = isForced ? 0 : config.getSyncThreshold();
+        logger.debug("Sync request isForced: {}, batchId: {}, config: {}", isForced, batchStartMillis, config.toString());
 
         File file = null;
         try {
-            file = batchManager.createBatch(batchStartMillis, config.getSyncThreshold(), config.getTemplate());
+            file = batchManager.createBatch(batchStartMillis, syncThreshold, config.getTemplate());
         } catch (IOException e) {
             logger.error("Failed to create batch: {}", e.getMessage());
         }

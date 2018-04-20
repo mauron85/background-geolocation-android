@@ -586,7 +586,7 @@ public class LocationService extends Service implements ProviderDelegate {
             if (mConfig.hasValidSyncUrl()) {
                 int locationsCount = mSyncQueue.size();
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mSyncQueue.getQueueSize());
-                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE));
+                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
             }
         }
 
@@ -595,7 +595,7 @@ public class LocationService extends Service implements ProviderDelegate {
             if (mConfig.hasValidSyncUrl()) {
                 int locationsCount = mSyncQueue.size();
                 logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mSyncQueue.getQueueSize());
-                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE));
+                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
             }
         }
 
