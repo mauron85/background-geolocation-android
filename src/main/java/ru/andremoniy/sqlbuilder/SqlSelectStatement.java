@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package com.marianhello.sqlbuilder;
+package ru.andremoniy.sqlbuilder;
 
-import com.marianhello.utils.TextUtils;
+import ru.andremoniy.utils.TextUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -94,7 +94,7 @@ public class SqlSelectStatement implements SqlStatement {
      @param column			The column to be selected.
      @updated				2012-03-24
      */
-    public void column(String column) {
+    public void column(Object column) {
         _column.add(SqlExpression.prepareIdentifier(column));
     }
 
@@ -105,8 +105,8 @@ public class SqlSelectStatement implements SqlStatement {
      @param alias			The alias to be used.
      @updated				2012-03-24
      */
-    public void column(String column, String alias) {
-        _column.add(String.format("%s AS %s", _all, SqlExpression.prepareIdentifier(column), SqlExpression.prepareAlias(alias)));
+    public void column(Object column, String alias) {
+        _column.add(String.format("%s AS %s", SqlExpression.prepareIdentifier(column), SqlExpression.prepareAlias(alias)));
     }
 
     /*!

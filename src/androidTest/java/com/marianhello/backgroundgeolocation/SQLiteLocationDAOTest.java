@@ -94,7 +94,7 @@ public class SQLiteLocationDAOTest {
     }
 
     @Test
-    public void deleteLocation() {
+    public void deleteLocationById() {
         Context ctx = InstrumentationRegistry.getTargetContext();
         SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
@@ -107,7 +107,7 @@ public class SQLiteLocationDAOTest {
         locations = dao.getAllLocations();
         Assert.assertEquals(1, locations.size());
 
-        dao.deleteLocation(locationId);
+        dao.deleteLocationById(locationId);
 
         locations = dao.getValidLocations();
         Assert.assertEquals(0, locations.size());
@@ -181,7 +181,7 @@ public class SQLiteLocationDAOTest {
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         for (int i = 0; i < maxRows * 2; i++) {
-            dao.persistLocationWithLimit(new BackgroundLocation(new Location("fake")), maxRows);
+            dao.persistLocation(new BackgroundLocation(new Location("fake")), maxRows);
         }
 
         Collection<BackgroundLocation> locations = dao.getAllLocations();
@@ -198,7 +198,7 @@ public class SQLiteLocationDAOTest {
         for (int i = 0; i < maxRowsRun.length; i++) {
             int maxRows = maxRowsRun[i];
             for (int j = 0; j < maxRows * 2; j++) {
-                dao.persistLocationWithLimit(new BackgroundLocation(new Location("fake")), maxRows);
+                dao.persistLocation(new BackgroundLocation(new Location("fake")), maxRows);
             }
             Collection<BackgroundLocation> locations = dao.getAllLocations();
             Assert.assertEquals(maxRows, locations.size());
@@ -209,7 +209,7 @@ public class SQLiteLocationDAOTest {
     }
 
     @Test
-    public void persisLocationWithBatchId() {
+    public void persistLocationWithBatchId() {
         Context ctx = InstrumentationRegistry.getTargetContext();
         SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
@@ -222,7 +222,7 @@ public class SQLiteLocationDAOTest {
     }
 
     @Test
-    public void locationsForSyncCount() {
+    public void getLocationsForSyncCount() {
         Context ctx = InstrumentationRegistry.getTargetContext();
         SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
@@ -231,18 +231,225 @@ public class SQLiteLocationDAOTest {
         for (int i = 1; i < 100; i++) {
             location = new BackgroundLocation();
             if ((i % 3) == 0) {
+                // exactly 33 locations (out of 99) should be eligible for sync for given batch id 1000
                 location.setBatchStartMillis(1000L);
+                location.setStatus(BackgroundLocation.SYNC_PENDING);
             } else if ((i % 2) == 0) {
-                location.setValid(false);
+                // exactly 33 locations as deleted
+                location.setStatus(BackgroundLocation.DELETED);
             } else {
-                //noop
+                location.setStatus(BackgroundLocation.SYNC_PENDING);
             }
             dao.persistLocation(location);
         }
 
         Assert.assertEquals(66, dao.getValidLocations().size());
         Assert.assertEquals(99, dao.getAllLocations().size());
-        Assert.assertEquals(Long.valueOf(66L), dao.locationsForSyncCount(10001L));
-        Assert.assertEquals(Long.valueOf(33L), dao.locationsForSyncCount(1000L));
+        Assert.assertEquals(66L, dao.getLocationsForSyncCount(10001L));
+        Assert.assertEquals(33L, dao.getLocationsForSyncCount(1000L));
+    }
+
+    @Test
+    public void getLocationById() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        Location location = null;
+        BackgroundLocation bgLocation = null;
+
+        for (int i = 0; i < 10; i++) {
+            location = new Location("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            bgLocation = new BackgroundLocation(location);
+            dao.persistLocation(bgLocation);
+        }
+
+        BackgroundLocation pending = dao.getLocationById(2);
+        Assert.assertEquals(Long.valueOf(2), pending.getLocationId());
+    }
+
+    @Test
+    public void getFirstPendingLocation() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = null;
+
+        for (int i = 1; i <= 5; i++) {
+            location = new BackgroundLocation();
+            location.setProvider("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            if (i <= 3) {
+                location.setStatus(BackgroundLocation.DELETED);
+            }
+
+            dao.persistLocation(location);
+        }
+
+        BackgroundLocation pending = dao.getFirstUnpostedLocation();
+        Assert.assertEquals(Long.valueOf(4), pending.getLocationId());
+    }
+
+    @Test
+    public void getNextPendingLocation() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = null;
+
+        for (int i = 1; i <= 5; i++) {
+            location = new BackgroundLocation();
+            location.setProvider("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            if (i <= 3) {
+                location.setStatus(BackgroundLocation.DELETED);
+            }
+
+            dao.persistLocation(location);
+        }
+
+        BackgroundLocation pending = dao.getNextUnpostedLocation(4);
+        Assert.assertEquals(Long.valueOf(5), pending.getLocationId());
+    }
+
+    @Test
+    public void getPendingLocationsCount() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = null;
+
+        for (int i = 0; i < 5; i++) {
+            location = new BackgroundLocation();
+            location.setProvider("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            if (i < 3) {
+                location.setStatus(BackgroundLocation.DELETED);
+            }
+
+            dao.persistLocation(location);
+        }
+
+        Assert.assertEquals(2, dao.getUnpostedLocationsCount());
+    }
+
+    @Test
+    public void deleteFirstPendingLocation() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = null;
+
+        for (int i = 1; i <= 5; i++) {
+            location = new BackgroundLocation();
+            location.setProvider("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            if (i <= 3) {
+                location.setStatus(BackgroundLocation.DELETED);
+            }
+
+            dao.persistLocation(location);
+        }
+
+        BackgroundLocation deleted = dao.deleteFirstUnpostedLocation();
+        Assert.assertEquals(Long.valueOf(4), deleted.getLocationId());
+    }
+
+    @Test
+    public void deletePendingLocations() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = null;
+
+        for (int i = 0; i < 5; i++) {
+            location = new BackgroundLocation();
+            location.setProvider("fake");
+            location.setAccuracy(200 + i);
+            location.setAltitude(900 + i);
+            location.setBearing(2 + i);
+            location.setLatitude(40.21 + i);
+            location.setLongitude(23.45 + i);
+            location.setSpeed(20 + i);
+            location.setProvider("test");
+            location.setTime(1000 + i);
+            if (i < 3) {
+                location.setStatus(BackgroundLocation.DELETED);
+            }
+
+            dao.persistLocation(location);
+        }
+
+        dao.deleteUnpostedLocations();
+        Assert.assertEquals(0, dao.getUnpostedLocationsCount());
+        Assert.assertEquals(2, dao.getLocationsForSyncCount(0));
+    }
+
+    @Test
+    public void persistLocationForSync() {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+
+        BackgroundLocation location = new BackgroundLocation();
+        location.setProvider("fake");
+        location.setAccuracy(200);
+        location.setAltitude(900);
+        location.setBearing(2);
+        location.setLatitude(40.21);
+        location.setLongitude(23.45);
+        location.setSpeed(20);
+        location.setProvider("test");
+        location.setTime(1000);
+
+        long locationId = dao.persistLocation(location);
+        location.setLocationId(locationId);
+        Assert.assertEquals(1, dao.getUnpostedLocationsCount());
+        Assert.assertEquals(0, dao.getLocationsForSyncCount(0));
+
+        dao.persistLocationForSync(location, 100);
+        Assert.assertEquals(0, dao.getUnpostedLocationsCount());
+        Assert.assertEquals(1, dao.getLocationsForSyncCount(0));
     }
 }

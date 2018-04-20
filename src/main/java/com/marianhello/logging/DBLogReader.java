@@ -4,8 +4,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 
-import com.marianhello.sqlbuilder.SqlExpression;
-import com.marianhello.sqlbuilder.SqlSelectStatement;
+import ru.andremoniy.sqlbuilder.SqlExpression;
+import ru.andremoniy.sqlbuilder.SqlSelectStatement;
 
 import org.slf4j.event.Level;
 

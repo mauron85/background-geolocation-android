@@ -4,21 +4,13 @@ import android.os.Build;
 import android.test.suitebuilder.annotation.SmallTest;
 
 import com.marianhello.bgloc.data.BackgroundLocation;
-import com.marianhello.bgloc.data.HashMapLocationTemplate;
-import com.marianhello.bgloc.data.LinkedHashSetLocationTemplate;
-import com.marianhello.bgloc.data.LocationTemplate;
 
 import junit.framework.Assert;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 
 /**
  * Created by finch on 10/08/16.

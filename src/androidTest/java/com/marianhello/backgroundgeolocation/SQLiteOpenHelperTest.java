@@ -142,7 +142,7 @@ public class SQLiteOpenHelperTest {
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_PROVIDER)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER)));
-        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_VALID)));
+        Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS)));
         Assert.assertTrue(columnNames.contains((SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS)));
 

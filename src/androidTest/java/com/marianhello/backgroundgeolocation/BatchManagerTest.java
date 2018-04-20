@@ -11,7 +11,6 @@ import android.util.JsonToken;
 import com.marianhello.bgloc.data.ArrayListLocationTemplate;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
-import com.marianhello.bgloc.data.LinkedHashSetLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
@@ -29,7 +28,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -111,10 +109,13 @@ public class BatchManagerTest {
             location.setProvider("test");
             location.setLocationProvider(1);
             if ((j % 3) == 0) {
+                // exactly 33 locations (out of 99) should be eligible for sync for given batch id 1000
                 location.setBatchStartMillis(1000L);
             } else if ((j % 2) == 0) {
-                location.setValid(false);
+                // exactly 33 locations as deleted
+                location.setStatus(BackgroundLocation.DELETED);
             } else {
+                location.setStatus(BackgroundLocation.SYNC_PENDING);
                 i++;
             }
             dao.persistLocation(location);
@@ -157,6 +158,7 @@ public class BatchManagerTest {
             location.setBatchStartMillis(1000L);
             location.setIsFromMockProvider(false);
             location.setMockLocationsEnabled(true);
+            location.setStatus(BackgroundLocation.SYNC_PENDING);
             dao.persistLocation(location);
         }
 
@@ -221,6 +223,7 @@ public class BatchManagerTest {
             location.setBatchStartMillis(1000L);
             location.setIsFromMockProvider(true);
             location.setMockLocationsEnabled(false);
+            location.setStatus(BackgroundLocation.SYNC_PENDING);
             dao.persistLocation(location);
         }
 
@@ -301,8 +304,9 @@ public class BatchManagerTest {
             if ((j % 99) == 0) {
                 location.setBatchStartMillis(1000L);
             } else if ((j % 2) == 0) {
-                location.setValid(false);
+                location.setStatus(BackgroundLocation.DELETED);
             } else {
+                location.setStatus(BackgroundLocation.SYNC_PENDING);
                 i++;
             }
             dao.persistLocation(location);
@@ -312,13 +316,13 @@ public class BatchManagerTest {
 
         Assert.assertEquals(99, dao.getAllLocations().size());
         Assert.assertEquals(50, dao.getValidLocations().size());
-        Assert.assertEquals(Long.valueOf(49), dao.locationsForSyncCount(1000L));
+        Assert.assertEquals(49, dao.getLocationsForSyncCount(1000L));
         BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
         try {
             batchManager.createBatch(1000L, 0);
             batchManager.setBatchCompleted(1000L);
             Assert.assertEquals(0, dao.getValidLocations().size());
-            Assert.assertEquals(Long.valueOf(0), dao.locationsForSyncCount(2000L));
+            Assert.assertEquals(0, dao.getLocationsForSyncCount(2000L));
         } catch (Exception e) {
             Assert.fail(e.getMessage());
         }

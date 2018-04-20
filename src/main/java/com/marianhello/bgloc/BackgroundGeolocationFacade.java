@@ -260,7 +260,7 @@ public class BackgroundGeolocationFacade {
     public void deleteLocation(Long locationId) {
         logger.info("Deleting location locationId={}", locationId);
         LocationDAO dao = DAOFactory.createLocationDAO(getContext());
-        dao.deleteLocation(locationId.longValue());
+        dao.deleteLocationById(locationId.longValue());
     }
 
     public void deleteAllLocations() {

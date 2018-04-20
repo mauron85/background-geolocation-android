@@ -13,6 +13,10 @@ import org.json.JSONObject;
 public class BackgroundLocation implements Parcelable {
     public static final String BUNDLE_KEY = "location";
 
+    public static final int DELETED = 0;
+    public static final int POST_PENDING = 1;
+    public static final int SYNC_PENDING = 2;
+
     private Long locationId = null;
     private Integer locationProvider = null;
     private Long batchStartMillis = null;
@@ -32,7 +36,7 @@ public class BackgroundLocation implements Parcelable {
     private boolean hasBearing = false;
     private boolean hasRadius = false;
     private int mockFlags = 0x0000;
-    private boolean isValid = true;
+    private int status = POST_PENDING;
     private Bundle extras = null;
 
     private static final long TWO_MINUTES_IN_NANOS = 1000000000L * 60 * 2;
@@ -109,7 +113,7 @@ public class BackgroundLocation implements Parcelable {
         hasBearing = l.hasBearing;
         hasRadius = l.hasRadius;
         mockFlags = l.mockFlags;
-        isValid = l.isValid;
+        status = l.status;
         extras = (l.extras == null) ? null : new Bundle(l.extras);
     }
 
@@ -133,7 +137,7 @@ public class BackgroundLocation implements Parcelable {
         hasBearing = in.readInt() != 0;
         hasRadius = in.readInt() != 0;
         mockFlags = in.readInt();
-        isValid = in.readInt() != 0;
+        status = in.readInt();
         extras = in.readBundle();
     }
 
@@ -163,7 +167,7 @@ public class BackgroundLocation implements Parcelable {
         dest.writeInt(hasBearing ? 1 : 0);
         dest.writeInt(hasRadius ? 1 : 0);
         dest.writeInt(mockFlags);
-        dest.writeInt(isValid ? 1 : 0);
+        dest.writeInt(status);
         dest.writeBundle(extras);
     }
 
@@ -577,20 +581,29 @@ public class BackgroundLocation implements Parcelable {
     }
 
     /**
-     * Returns true if location is considered valid.
-     * Location are actually not deleted from db, but instead
-     * marked as non-valid.
-     *
-     * @return true if location is valid (non deleted), false otherwise
+     * Returns status of location. Can be one of:
+     * <ul>
+     *     <li>{@value #DELETED}</li>
+     *     <li>{@value #POST_PENDING}</li>
+     *     <li>{@value #SYNC_PENDING}</li>
+     * </ul>
+     * @return status
      */
-    public boolean isValid() { return isValid; }
+    public int getStatus() {
+        return status;
+    }
 
     /**
-     * Sets location validity
-     * @param isValid
+     * Sets status of location. Can be one of:
+     * <ul>
+     *     <li>{@value #DELETED}</li>
+     *     <li>{@value #POST_PENDING}</li>
+     *     <li>{@value #SYNC_PENDING}</li>
+     * </ul>
+     * @param status
      */
-    public void setValid(boolean isValid) {
-        this.isValid = isValid;
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     /**

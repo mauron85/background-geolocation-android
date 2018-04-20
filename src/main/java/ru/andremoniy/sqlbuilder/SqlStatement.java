@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.marianhello.sqlbuilder;
+package ru.andremoniy.sqlbuilder;
 
 interface SqlStatement {
     /*!

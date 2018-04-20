@@ -39,7 +39,7 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
         LocationEntry.COLUMN_NAME_HAS_RADIUS + INTEGER_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_PROVIDER + TEXT_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_LOCATION_PROVIDER + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_VALID + INTEGER_TYPE + COMMA_SEP +
+        LocationEntry.COLUMN_NAME_STATUS + INTEGER_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + INTEGER_TYPE + COMMA_SEP +
         LocationEntry.COLUMN_NAME_MOCK_FLAGS + INTEGER_TYPE +
         " )";
@@ -132,7 +132,7 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
         switch (oldVersion) {
             case 10:
                 alterSql.add("ALTER TABLE " + LocationEntry.TABLE_NAME +
-                        " ADD COLUMN " + LocationEntry.COLUMN_NAME_VALID + INTEGER_TYPE);
+                        " ADD COLUMN " + LocationEntry.COLUMN_NAME_STATUS + INTEGER_TYPE);
                 alterSql.add(SQL_CREATE_LOCATION_TABLE_TIME_IDX);
                 alterSql.add(SQL_DROP_CONFIG_TABLE);
                 alterSql.add(SQL_CREATE_CONFIG_TABLE);

@@ -8,8 +8,8 @@ import android.text.TextUtils;
 import android.util.JsonWriter;
 
 import com.marianhello.bgloc.data.ArrayListLocationTemplate;
+import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
-import com.marianhello.bgloc.data.LinkedHashSetLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -63,11 +62,14 @@ public class BatchManager {
         };
 
         String whereClause = TextUtils.join("", new String[]{
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_VALID + " = ? AND ( ",
+                SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS + " = ? AND ( ",
                 SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " IS NULL OR ",
                 SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " < ? )",
         });
-        String[] whereArgs = { "1", String.valueOf(batchStartMillis) };
+        String[] whereArgs = {
+                String.valueOf(BackgroundLocation.SYNC_PENDING),
+                String.valueOf(batchStartMillis)
+        };
         String groupBy = null;
         String having = null;
         String orderBy = SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME + " ASC";
@@ -305,7 +307,7 @@ public class BatchManager {
         String[] whereArgs = { String.valueOf(batchId) };
 
         ContentValues values = new ContentValues();
-        values.put(SQLiteLocationContract.LocationEntry.COLUMN_NAME_VALID, 0);
+        values.put(SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.DELETED);
         db.update(SQLiteLocationContract.LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
     }
 }
