@@ -52,13 +52,15 @@ public class BackgroundGeolocationFacade {
 
     private static final int MESSENGER_CLIENT_ID = 666;
 
+    private Context mContext;
+    private final Handler mMainhandler;
     /** Messenger for communicating with the service. */
     private Messenger mService = null;
     /** Flag indicating whether we have called bind on the service. */
     private Boolean mIsBound = false;
     private Boolean mLocationModeChangeReceiverRegistered = false;
     private Config mConfig = null;
-    private PluginDelegate mDelegate;
+    private final PluginDelegate mDelegate;
     private String mHeadlessJsFunction;
     private int mMode = FOREGROUND_MODE;
     private final Object mLock = new Object();
@@ -69,16 +71,18 @@ public class BackgroundGeolocationFacade {
 
     Messenger mMessenger;
 
-    public BackgroundGeolocationFacade(PluginDelegate delegate) {
-        UncaughtExceptionLogger.register(delegate.getContext());
-
+    public BackgroundGeolocationFacade(Context context, PluginDelegate delegate) {
+        mContext = context;
         mDelegate = delegate;
+
+        UncaughtExceptionLogger.register(context);
 
         logger = LoggerManager.getLogger(BackgroundGeolocationFacade.class);
         LoggerManager.enableDBLogging();
 
         logger.info("Initializing plugin");
 
+        mMainhandler = new Handler(context.getMainLooper());
         NotificationHelper.registerAllChannels(getContext());
     }
 
@@ -486,8 +490,10 @@ public class BackgroundGeolocationFacade {
     }
 
     private void runOnUiThread(Runnable runnable) {
-        if (getActivity() == null) return;
-        getActivity().runOnUiThread(runnable);
+        if (mMainhandler == null) {
+            return;
+        }
+        mMainhandler.post(runnable);
     }
 
     private void serviceSend(Message message) {
@@ -508,11 +514,7 @@ public class BackgroundGeolocationFacade {
     }
 
     private Context getContext() {
-        return mDelegate.getContext();
-    }
-
-    private Activity getActivity() {
-        return mDelegate.getActivity();
+        return mContext;
     }
 
     public static void showAppSettings(Context context) {

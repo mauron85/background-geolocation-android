@@ -11,9 +11,6 @@ import com.marianhello.bgloc.data.BackgroundLocation;
  */
 
 public interface PluginDelegate {
-    Activity getActivity();
-    Context getContext();
-
     void onAuthorizationChanged(int authStatus);
     void onLocationChanged(BackgroundLocation location);
     void onStationaryChanged(BackgroundLocation location);
