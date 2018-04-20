@@ -475,7 +475,7 @@ public class LocationService extends Service implements ProviderDelegate {
         super.unregisterReceiver(receiver);
     }
 
-    public void onError(PluginError error) {
+    public void onError(PluginException error) {
         Message msg = Message.obtain(null, MSG_ERROR);
         msg.setData(error.toBundle());
         sendClientMessage(msg);

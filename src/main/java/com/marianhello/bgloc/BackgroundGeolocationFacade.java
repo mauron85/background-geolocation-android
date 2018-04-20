@@ -2,7 +2,6 @@ package com.marianhello.bgloc;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -150,7 +149,7 @@ public class BackgroundGeolocationFacade {
                     bundle.setClassLoader(LocationService.class.getClassLoader());
                     Integer errorCode = bundle.getInt("code");
                     String errorMessage = bundle.getString("message");
-                    mDelegate.onError(new PluginError(errorCode, errorMessage));
+                    mDelegate.onError(new PluginException(errorMessage, errorCode));
 
                     break;
                 default:
@@ -210,7 +209,7 @@ public class BackgroundGeolocationFacade {
             try {
                 mDelegate.onAuthorizationChanged(getAuthorizationStatus());
             } catch (SettingNotFoundException e) {
-                mDelegate.onError(new PluginError(PluginError.SETTINGS_ERROR, "Error occured while determining location mode"));
+                mDelegate.onError(new PluginException("Error occured while determining location mode", PluginException.SETTINGS_ERROR));
             }
         }
     };
@@ -233,7 +232,7 @@ public class BackgroundGeolocationFacade {
         mLocationModeChangeReceiverRegistered = false;
     }
 
-    public void start() throws JSONException {
+    public void start() {
         logger.debug("Starting service");
         startAndBindBackgroundService();
         // watch location mode changes
@@ -296,7 +295,7 @@ public class BackgroundGeolocationFacade {
         serviceSend(msg);
     }
 
-    public void configure(Config newConfig) {
+    public void configure(Config newConfig) throws PluginException {
         Config config;
 
         synchronized (mLock) {
@@ -319,7 +318,7 @@ public class BackgroundGeolocationFacade {
                 serviceSend(msg);
             } catch (Exception e) {
                 logger.error("Configuration persist error: {}", e.getMessage());
-                mDelegate.onError(new PluginError(PluginError.CONFIGURE_ERROR, e.getMessage()));
+                throw new PluginException("Configuration error", e, PluginException.CONFIGURE_ERROR);
             }
         }
     }
@@ -391,7 +390,7 @@ public class BackgroundGeolocationFacade {
             safeBindService();
         } catch (JSONException e) {
             logger.error("Error starting service: {}", e.getMessage());
-            mDelegate.onError(new PluginError(PluginError.SERVICE_ERROR, e.getMessage()));
+            mDelegate.onError(new PluginException(e.getMessage(), PluginException.SERVICE_ERROR));
         }
     }
 

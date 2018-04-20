@@ -21,7 +21,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.location.DetectedActivity;
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.PluginError;
+import com.marianhello.bgloc.PluginException;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.logging.LoggerManager;
@@ -142,7 +142,7 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      * @param exception
      */
     protected void handleSecurityException (SecurityException exception) {
-        PluginError error = new PluginError(PluginError.PERMISSION_DENIED_ERROR, exception.getMessage());
+        PluginException error = new PluginException(exception.getMessage(), PluginException.PERMISSION_DENIED_ERROR);
         if (mDelegate != null) {
             mDelegate.onError(error);
         }
