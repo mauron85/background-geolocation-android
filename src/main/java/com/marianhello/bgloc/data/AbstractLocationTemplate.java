@@ -10,4 +10,5 @@ import java.io.Serializable;
 
 abstract public class AbstractLocationTemplate implements LocationTemplate, Serializable {
     public static final String BUNDLE_KEY = "template";
+    public abstract LocationTemplate clone();
 }

@@ -16,6 +16,7 @@ import android.os.Parcelable;
 import com.marianhello.bgloc.data.AbstractLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
+import com.marianhello.utils.CloneHelper;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -26,13 +27,16 @@ import java.util.Iterator;
 /**
  * Config class
  */
-public class Config implements Parcelable, Cloneable
+public class Config implements Parcelable
 {
     public static final String BUNDLE_KEY = "config";
 
     public static final int DISTANCE_FILTER_PROVIDER = 0;
     public static final int ACTIVITY_PROVIDER = 1;
     public static final int RAW_PROVIDER = 2;
+
+    // NULL string config option to distinguish between java null
+    public static final String NullString = new String();
 
     private Float stationaryRadius;
     private Integer distanceFilter;
@@ -59,6 +63,35 @@ public class Config implements Parcelable, Cloneable
     private LocationTemplate template;
 
     public Config () {
+    }
+
+    // Copy constructor
+    public Config(Config config) {
+        this.stationaryRadius = config.stationaryRadius;
+        this.distanceFilter = config.distanceFilter;
+        this.desiredAccuracy = config.desiredAccuracy;
+        this.debug = config.debug;
+        this.notificationTitle = config.notificationTitle;
+        this.notificationText = config.notificationText;
+        this.notificationIconLarge = config.notificationIconLarge;
+        this.notificationIconSmall = config.notificationIconSmall;
+        this.notificationIconColor = config.notificationIconColor;
+        this.locationProvider = config.locationProvider;
+        this.interval = config.interval;
+        this.fastestInterval = config.fastestInterval;
+        this.activitiesInterval = config.activitiesInterval;
+        this.stopOnTerminate = config.stopOnTerminate;
+        this.startOnBoot = config.startOnBoot;
+        this.startForeground = config.startForeground;
+        this.stopOnStillActivity = config.stopOnStillActivity;
+        this.url = config.url;
+        this.syncUrl = config.syncUrl;
+        this.syncThreshold = config.syncThreshold;
+        this.httpHeaders = CloneHelper.deepCopy(config.httpHeaders);
+        this.maxLocations = config.maxLocations;
+        if (config.template instanceof AbstractLocationTemplate) {
+            this.template = ((AbstractLocationTemplate)config.template).clone();
+        }
     }
 
     private Config(Parcel in) {
@@ -213,7 +246,7 @@ public class Config implements Parcelable, Cloneable
         this.debug = debug;
     }
 
-    public Boolean hasNotificationIconColor() {
+    public boolean hasNotificationIconColor() {
         return notificationIconColor != null && !notificationIconColor.isEmpty();
     }
 
@@ -222,11 +255,7 @@ public class Config implements Parcelable, Cloneable
     }
 
     public void setNotificationIconColor(String notificationIconColor) {
-        if ("null".equals(notificationIconColor)) {
-            this.notificationIconColor = "";
-        } else {
-            this.notificationIconColor = notificationIconColor;
-        }
+        this.notificationIconColor = notificationIconColor;
     }
 
     public boolean hasNotificationTitle() {
@@ -238,11 +267,7 @@ public class Config implements Parcelable, Cloneable
     }
 
     public void setNotificationTitle(String notificationTitle) {
-        if ("null".equals(notificationTitle)) {
-            this.notificationTitle = "";
-        } else {
-            this.notificationTitle = notificationTitle;
-        }
+        this.notificationTitle = notificationTitle;
     }
 
     public boolean hasNotificationText() {
@@ -254,14 +279,10 @@ public class Config implements Parcelable, Cloneable
     }
 
     public void setNotificationText(String notificationText) {
-        if ("null".equals(notificationText)) {
-            this.notificationText = "";
-        } else{
-            this.notificationText = notificationText;
-        }
+        this.notificationText = notificationText;
     }
 
-    public Boolean hasLargeNotificationIcon() {
+    public boolean hasLargeNotificationIcon() {
         return notificationIconLarge != null && !notificationIconLarge.isEmpty();
     }
 
@@ -270,14 +291,10 @@ public class Config implements Parcelable, Cloneable
     }
 
     public void setLargeNotificationIcon (String icon) {
-        if ("null".equals(icon)) {
-            this.notificationIconLarge = "";
-        } else{
-            this.notificationIconLarge = icon;
-        }
+        this.notificationIconLarge = icon;
     }
 
-    public Boolean hasSmallNotificationIcon() {
+    public boolean hasSmallNotificationIcon() {
         return notificationIconSmall != null && !notificationIconSmall.isEmpty();
     }
 
@@ -286,11 +303,7 @@ public class Config implements Parcelable, Cloneable
     }
 
     public void setSmallNotificationIcon (String icon) {
-        if ("null".equals(icon)) {
-            this.notificationIconSmall = "";
-        } else{
-            this.notificationIconSmall = icon;
-        }
+        this.notificationIconSmall = icon;
     }
 
     public boolean hasStopOnTerminate() {
@@ -389,48 +402,34 @@ public class Config implements Parcelable, Cloneable
         this.stopOnStillActivity = stopOnStillActivity;
     }
 
-    public Boolean hasUrl() {
+    public boolean hasUrl() {
         return url != null;
     }
-    public Boolean hasValidUrl() {
+    public boolean hasValidUrl() {
         return url != null && !url.isEmpty();
     }
 
     public String getUrl() {
-        if (!hasUrl()) {
-            url = "";
-        }
         return url;
     }
 
     public void setUrl(String url) {
-        if ("null".equals(url)) {
-            this.url = "";
-        } else{
-            this.url = url;
-        }
+        this.url = url;
     }
 
-    public Boolean hasSyncUrl() {
+    public boolean hasSyncUrl() {
         return syncUrl != null;
     }
-    public Boolean hasValidSyncUrl() {
+    public boolean hasValidSyncUrl() {
         return syncUrl != null && !syncUrl.isEmpty();
     }
 
     public String getSyncUrl() {
-        if (!hasSyncUrl()) {
-            syncUrl = "";
-        }
         return syncUrl;
     }
 
     public void setSyncUrl(String syncUrl) {
-        if ("null".equals(syncUrl)) {
-            this.syncUrl = "";
-        } else{
-            this.syncUrl = syncUrl;
-        }
+        this.syncUrl = syncUrl;
     }
 
     public boolean hasSyncThreshold() {
@@ -545,8 +544,8 @@ public class Config implements Parcelable, Cloneable
         return bundle;
     }
 
-    public static Config merge(Config config1, Config config2) throws CloneNotSupportedException {
-        Config merger = (Config) config1.clone();
+    public static Config merge(Config config1, Config config2) {
+        Config merger = new Config(config1);
 
         if (config2.hasStationaryRadius()) {
             merger.setStationaryRadius(config2.getStationaryRadius());

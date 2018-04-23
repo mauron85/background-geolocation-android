@@ -122,7 +122,7 @@ public class HashMapLocationTemplateTest {
 
     @Test
     public void testNullToString() {
-        HashMapLocationTemplate tpl = new HashMapLocationTemplate(null);
+        HashMapLocationTemplate tpl = new HashMapLocationTemplate((HashMap)null);
         Assert.assertEquals("null", tpl.toString());
     }
 }

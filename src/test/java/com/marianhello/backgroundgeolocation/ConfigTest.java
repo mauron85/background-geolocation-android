@@ -3,12 +3,16 @@ package com.marianhello.backgroundgeolocation;
 import android.test.suitebuilder.annotation.SmallTest;
 
 import com.marianhello.bgloc.Config;
+import com.marianhello.bgloc.data.ArrayListLocationTemplate;
+import com.marianhello.bgloc.data.HashMapLocationTemplate;
+import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -76,7 +80,7 @@ public class ConfigTest {
     }
 
     @Test
-    public void testMergeConfig() throws CloneNotSupportedException {
+    public void testMergeConfig() {
         Config config = new Config();
 
         config.setSyncThreshold(10);
@@ -103,19 +107,58 @@ public class ConfigTest {
     }
 
     @Test
-    public void testMergeHttpHeaders() throws CloneNotSupportedException {
+    public void testMergeHttpHeaders() {
         HashMap httpHeaders = new HashMap<String, String>();
-        httpHeaders.put("key1", "value1");
-        httpHeaders.put("key2", "value2");
+        httpHeaders.put("key", "value");
 
         Config config = new Config();
         config.setHttpHeaders(httpHeaders);
 
         Config merged = Config.merge(config, new Config());
+        httpHeaders.put("key", "othervalue");
 
         Assert.assertNotSame(config, merged);
-        // TODO: we should probably clone httpHeaders too (leaving for now)
-        //Assert.assertNotSame(config.getHttpHeaders(), merged.getHttpHeaders());
+        Assert.assertNotSame(config.getHttpHeaders(), merged.getHttpHeaders());
+        Assert.assertEquals("value", merged.getHttpHeaders().get("key"));
+        Assert.assertEquals("othervalue", config.getHttpHeaders().get("key"));
+    }
+
+    @Test
+    public void testMergeHashTemplate() {
+        HashMap map = new HashMap();
+        map.put("key", "value");
+        LocationTemplate tpl = new HashMapLocationTemplate(map);
+
+        Config config = new Config();
+        config.setTemplate(tpl);
+
+        Config merged = Config.merge(config, new Config());
+        map.put("key", "othervalue");
+
+        Assert.assertNotSame(config, merged);
+        Assert.assertNotSame(config.getTemplate(), merged.getTemplate());
+        Assert.assertEquals("value", ((HashMapLocationTemplate)merged.getTemplate()).get("key"));
+        Assert.assertEquals("othervalue", ((HashMapLocationTemplate)config.getTemplate()).get("key"));
+    }
+
+
+    @Test
+    public void testMergeArrayTemplate() {
+        ArrayList props = new ArrayList();
+        props.add("foo");
+        ArrayListLocationTemplate tpl = new ArrayListLocationTemplate(props);
+
+        Config config = new Config();
+        config.setTemplate(tpl);
+
+        Config merged = Config.merge(config, new Config());
+
+        props.add(0, "foobar");
+
+        Assert.assertNotSame(config, merged);
+        Assert.assertNotSame(config.getTemplate(), merged.getTemplate());
+        Assert.assertEquals("foo", ((ArrayListLocationTemplate)merged.getTemplate()).toArray()[0]);
+        Assert.assertEquals("foobar", ((ArrayListLocationTemplate)config.getTemplate()).toArray()[0]);
     }
 
     @Test
@@ -128,11 +171,21 @@ public class ConfigTest {
         config2.setUrl("");
         config2.setSyncUrl("");
 
-        try {
-            Assert.assertEquals("", Config.merge(config1, config2).getUrl());
-            Assert.assertEquals("", Config.merge(config1, config2).getSyncUrl());
-        } catch (CloneNotSupportedException e) {
-            Assert.fail(e.getMessage());
-        }
+        Assert.assertEquals("", Config.merge(config1, config2).getUrl());
+        Assert.assertEquals("", Config.merge(config1, config2).getSyncUrl());
+    }
+
+    @Test
+    public void testResetToDefaultProps() {
+        Config config1 = new Config();
+        config1.setUrl("url");
+        config1.setSyncUrl("syncUrl");
+
+        Config config2 = new Config();
+        config2.setUrl("");
+        config2.setSyncUrl("");
+
+        Assert.assertEquals(Config.getDefault().getUrl(), Config.merge(config1, config2).getUrl());
+        Assert.assertEquals(Config.getDefault().getSyncUrl(), Config.merge(config1, config2).getSyncUrl());
     }
 }

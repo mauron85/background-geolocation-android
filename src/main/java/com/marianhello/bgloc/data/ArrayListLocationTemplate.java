@@ -1,8 +1,11 @@
 package com.marianhello.bgloc.data;
 
+import android.support.annotation.NonNull;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -10,22 +13,35 @@ import java.util.Iterator;
  * Created by finch on 15.12.2017.
  */
 
-public class ArrayListLocationTemplate extends AbstractLocationTemplate implements LocationTemplate {
-    private ArrayList list;
+public class ArrayListLocationTemplate extends AbstractLocationTemplate implements Serializable {
+    private ArrayList mList;
     private static final long serialVersionUID = 1234L;
 
+    // copy constructor
+    public ArrayListLocationTemplate(ArrayListLocationTemplate tpl) {
+        if (tpl == null || tpl.mList == null) {
+            return;
+        }
+
+        mList = new ArrayList();
+        Iterator it = tpl.mList.iterator();
+        while (it.hasNext()) {
+            mList.add(it.next());
+        }
+    }
+
     public ArrayListLocationTemplate(ArrayList list) {
-        this.list = list;
+        this.mList = list;
     }
 
     @Override
     public Object locationToJson(BackgroundLocation location) throws JSONException {
         JSONArray jArray = new JSONArray();
-        if (list == null) {
+        if (mList == null) {
             return jArray;
         }
 
-        Iterator it = list.iterator();
+        Iterator it = mList.iterator();
         while (it.hasNext()) {
             Object value = null;
             Object key = it.next();
@@ -39,16 +55,16 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
     }
 
     public Iterator iterator() {
-        return list.iterator();
+        return mList.iterator();
     }
 
     public boolean containsKey(String key) {
-        return list.contains(key);
+        return mList.contains(key);
     }
 
     @Override
     public boolean isEmpty() {
-        return list == null || list.isEmpty();
+        return mList == null || mList.isEmpty();
     }
 
     @Override
@@ -56,17 +72,17 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
         if (other == null) return false;
         if (other == this) return true;
         if (!(other instanceof ArrayListLocationTemplate)) return false;
-        return ((ArrayListLocationTemplate) other).list.equals(this.list);
+        return ((ArrayListLocationTemplate) other).mList.equals(this.mList);
     }
 
     @Override
     public String toString() {
-        if (list == null) {
+        if (mList == null) {
             return "null";
         }
 
         JSONArray jArray = new JSONArray();
-        Iterator<?> it = (list).iterator();
+        Iterator<?> it = (mList).iterator();
         while (it.hasNext()) {
             jArray.put(it.next());
         }
@@ -74,10 +90,15 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
     }
 
     public Object[] toArray() {
-        if (list == null) {
+        if (mList == null) {
             return null;
         }
 
-        return list.toArray();
+        return mList.toArray();
+    }
+
+    @Override
+    public LocationTemplate clone() {
+        return new ArrayListLocationTemplate(this);
     }
 }

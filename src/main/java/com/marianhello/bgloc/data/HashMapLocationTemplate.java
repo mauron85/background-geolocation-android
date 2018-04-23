@@ -1,5 +1,9 @@
 package com.marianhello.bgloc.data;
 
+import android.support.annotation.NonNull;
+
+import com.marianhello.utils.CloneHelper;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -13,18 +17,27 @@ import java.util.Map;
  */
 
 public class HashMapLocationTemplate extends AbstractLocationTemplate implements Serializable {
-    private HashMap<?, String> map;
+    private HashMap<?, String> mMap;
     private static final long serialVersionUID = 1234L;
 
+    // copy constructor
+    public HashMapLocationTemplate(HashMapLocationTemplate tpl) {
+        if (tpl == null || tpl.mMap == null) {
+            return;
+        }
+
+        mMap = CloneHelper.deepCopy(tpl.mMap);
+    }
+
     public HashMapLocationTemplate(HashMap map) {
-        this.map = map;
+        this.mMap = map;
     }
 
     @Override
     public Object locationToJson(BackgroundLocation location) throws JSONException {
         JSONObject jObject = new JSONObject();
 
-        Iterator<?> it = map.entrySet().iterator();
+        Iterator<?> it = mMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, Object> pair = (Map.Entry) it.next();
             Object value = null;
@@ -39,20 +52,20 @@ public class HashMapLocationTemplate extends AbstractLocationTemplate implements
     }
 
     public Iterator iterator() {
-        return map.entrySet().iterator();
+        return mMap.entrySet().iterator();
     }
 
     public boolean containsKey(String propName) {
-        return map.containsKey(propName);
+        return mMap.containsKey(propName);
     }
 
     public String get(String key) {
-        return map.get(key);
+        return mMap.get(key);
     }
 
     @Override
     public boolean isEmpty() {
-        return map == null || map.isEmpty();
+        return mMap == null || mMap.isEmpty();
     }
 
     @Override
@@ -60,20 +73,25 @@ public class HashMapLocationTemplate extends AbstractLocationTemplate implements
         if (other == null) return false;
         if (other == this) return true;
         if (!(other instanceof HashMapLocationTemplate)) return false;
-        return ((HashMapLocationTemplate) other).map.equals(this.map);
+        return ((HashMapLocationTemplate) other).mMap.equals(this.mMap);
     }
 
     @Override
     public String toString() {
-        if (map == null) {
+        if (mMap == null) {
             return "null";
         }
 
-        JSONObject jObject = new JSONObject(map);
+        JSONObject jObject = new JSONObject(mMap);
         return jObject.toString();
     }
 
     public Map toMap() {
-        return map;
+        return mMap;
+    }
+
+    @Override
+    public LocationTemplate clone() {
+        return new HashMapLocationTemplate(this);
     }
 }

@@ -18,7 +18,7 @@ import java.util.ArrayList;
 
 public class ArrayListLocationTemplateTest {
     @Test
-    public void testLinkedHashSetTemplateToString() {
+    public void testArrayTemplateToString() {
         ArrayList props = new ArrayList();
         props.add("foo");
         props.add("bar");
@@ -76,7 +76,7 @@ public class ArrayListLocationTemplateTest {
 
     @Test
     public void testNullToString() {
-        ArrayListLocationTemplate tpl = new ArrayListLocationTemplate(null);
+        ArrayListLocationTemplate tpl = new ArrayListLocationTemplate((ArrayList)null);
         Assert.assertEquals("null", tpl.toString());
     }
 }

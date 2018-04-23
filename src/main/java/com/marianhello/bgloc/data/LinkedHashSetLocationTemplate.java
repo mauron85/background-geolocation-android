@@ -81,4 +81,9 @@ public class LinkedHashSetLocationTemplate extends AbstractLocationTemplate impl
 
         return set.toArray();
     }
+
+    @Override
+    public LocationTemplate clone() {
+        throw new UnsupportedOperationException("not implemented yet");
+    }
 }
