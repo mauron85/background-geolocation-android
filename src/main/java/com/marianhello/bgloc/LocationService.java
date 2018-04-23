@@ -14,6 +14,7 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -230,6 +231,10 @@ public class LocationService extends Service implements ProviderDelegate {
         mPostLocationTask = new PostLocationTask(mLocationDAO);
         mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME,
                 mResolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
+
+        String authority = mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE);
+        ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
+        ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         NotificationHelper.registerServiceChannel(this);
