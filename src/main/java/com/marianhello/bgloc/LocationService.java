@@ -538,6 +538,7 @@ public class LocationService extends Service implements ProviderDelegate {
             mSyncQueue = new SyncQueue(dao, 0);
             mPostThread = new Thread(new PostRunnable());
             mPostThread.setPriority(Thread.MIN_PRIORITY);
+            mPostThread.setName("PostLocationTask");
         }
 
         public void configure(Config config) {
@@ -567,6 +568,7 @@ public class LocationService extends Service implements ProviderDelegate {
             // NOTE: clear is non standard, but effectively adds locations to sync queue
             // by updating their status @see PostQueueManager#clear
             // will call onPostQueueCleared
+            mPostThread.interrupt();
             mPostQueue.clear();
         }
 
@@ -637,8 +639,12 @@ public class LocationService extends Service implements ProviderDelegate {
                     synchronized (mPostQueue) {
                         while (mPostQueue.isEmpty()) {
                             try {
+                                if (mIsInterrupted) {
+                                    break;
+                                }
                                 mPostQueue.wait();
                             } catch (InterruptedException e) {
+                                logger.debug("Thread interrupted");
                                 // not interested
                             }
                         }
