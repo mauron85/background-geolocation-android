@@ -209,11 +209,7 @@ public class BackgroundGeolocationFacade {
         @Override
         public void onReceive(Context context, Intent intent) {
             logger.debug("Authorization has changed");
-            try {
-                mDelegate.onAuthorizationChanged(getAuthorizationStatus());
-            } catch (SettingNotFoundException e) {
-                mDelegate.onError(new PluginException("Error occured while determining location mode", PluginException.SETTINGS_ERROR));
-            }
+            mDelegate.onAuthorizationChanged(getAuthorizationStatus());
         }
     };
 
@@ -365,15 +361,21 @@ public class BackgroundGeolocationFacade {
         SyncService.sync(syncAccount, resolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), true);
     }
 
-    public int getAuthorizationStatus() throws SettingNotFoundException {
+    public int getAuthorizationStatus() {
         return hasPermissions() ? AUTHORIZATION_AUTHORIZED : AUTHORIZATION_DENIED;
     }
 
-    public boolean locationServicesEnabled() throws SettingNotFoundException {
+    public boolean locationServicesEnabled() throws PluginException {
         Context context = getContext();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            int locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
-            return locationMode != Settings.Secure.LOCATION_MODE_OFF;
+            int locationMode = 0;
+            try {
+                locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
+                return locationMode != Settings.Secure.LOCATION_MODE_OFF;
+            } catch (SettingNotFoundException e) {
+                logger.error("Location services check failed", e);
+                throw new PluginException("Location services check failed", e, PluginException.SETTINGS_ERROR);
+            }
         } else {
             String locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
             return !TextUtils.isEmpty(locationProviders);
