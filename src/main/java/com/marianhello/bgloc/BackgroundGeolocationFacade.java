@@ -218,14 +218,14 @@ public class BackgroundGeolocationFacade {
     };
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    private void registerLocationModeChangeReceiver () {
+    private synchronized void registerLocationModeChangeReceiver () {
         if (mLocationModeChangeReceiverRegistered) return;
 
         getContext().registerReceiver(locationModeChangeReceiver, new IntentFilter(LocationManager.MODE_CHANGED_ACTION));
         mLocationModeChangeReceiverRegistered = true;
     }
 
-    private void unregisterLocationModeChangeReceiver () {
+    private synchronized void unregisterLocationModeChangeReceiver () {
         if (mLocationModeChangeReceiverRegistered == false) return;
 
         Context context = getContext();
@@ -304,7 +304,7 @@ public class BackgroundGeolocationFacade {
         synchronized (mLock) {
             try {
                 config = getConfig();
-            } catch (JSONException e) {
+            } catch (PluginException e) {
                 config = Config.getDefault();
             }
 
@@ -326,16 +326,18 @@ public class BackgroundGeolocationFacade {
         }
     }
 
-    public Config getConfig() throws JSONException {
-        Config config = mConfig;
-        try {
-            if (config == null) {
-                config = getStoredOrDefaultConfig();
+    public Config getConfig() throws PluginException {
+        synchronized (mLock) {
+            Config config = mConfig;
+            try {
+                if (config == null) {
+                    config = getStoredOrDefaultConfig();
+                }
+                return config;
+            } catch (JSONException e) {
+                logger.error("Error getting stored config: {}", e.getMessage());
+                throw new PluginException("Error getting stored config", e, PluginException.JSON_ERROR);
             }
-            return config;
-        } catch (JSONException e) {
-            logger.error("Error getting stored config: {}", e.getMessage());
-            throw e;
         }
     }
 
