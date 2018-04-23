@@ -28,14 +28,6 @@ public class PluginException extends Exception {
         return code;
     }
 
-    public JSONObject toJSONObject() throws JSONException {
-        JSONObject message = new JSONObject();
-        message.put("code", this.code);
-        message.put("message", getMessage());
-
-        return message;
-    }
-
     public Bundle toBundle() {
         Bundle bundle = new Bundle();
         bundle.putInt("code", this.code);
