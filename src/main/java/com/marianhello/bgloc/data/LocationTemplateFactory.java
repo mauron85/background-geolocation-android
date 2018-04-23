@@ -51,10 +51,6 @@ public class LocationTemplateFactory {
         return new HashMapLocationTemplate(template);
     }
 
-    public static LocationTemplate fromLinkedHashSet(LinkedHashSet template) {
-        return new LinkedHashSetLocationTemplate(template);
-    }
-
     public static LocationTemplate fromArrayList(ArrayList template) {
         return new ArrayListLocationTemplate(template);
     }
