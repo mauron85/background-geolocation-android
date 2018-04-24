@@ -49,31 +49,6 @@ public class ConfigTest {
     }
 
     @Test
-    public void testTemplateParcelableFromLinkedHashSet() {
-        Config config = Config.getDefault();
-
-        LinkedHashSet set = new LinkedHashSet<String>();
-        set.add("@id");
-        set.add("@provider");
-        set.add("@time");
-        set.add("@altitude");
-        set.add("@latitude");
-        set.add("@longitude");
-        set.add("foo");
-        set.add("@locationProvider");
-        set.add("@accuracy");
-        set.add("@speed");
-        set.add("@bearing");
-
-        config.setTemplate(LocationTemplateFactory.fromLinkedHashSet(set));
-
-        Parcel configParcel = config.toParcel();
-        Config configFromParcel = Config.fromByteArray(configParcel.marshall());
-
-        Assert.assertEquals(config.getTemplate(), configFromParcel.getTemplate());
-    }
-
-    @Test
     public void testTemplateParcelableFromHashMap() {
         Config config = Config.getDefault();
 
