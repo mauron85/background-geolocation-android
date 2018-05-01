@@ -28,16 +28,14 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.RemoteException;
 import android.os.Process;
+import android.os.RemoteException;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
-import com.marianhello.bgloc.data.PostQueue;
-import com.marianhello.bgloc.data.SyncQueue;
 import com.marianhello.bgloc.headless.ActivityTask;
 import com.marianhello.bgloc.headless.HeadlessTaskRunner;
 import com.marianhello.bgloc.headless.LocationTask;
@@ -57,6 +55,8 @@ import org.json.JSONException;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LocationService extends Service implements ProviderDelegate {
 
@@ -254,7 +254,7 @@ public class LocationService extends Service implements ProviderDelegate {
             mHandlerThread.quit(); //sorry
         }
         if (mPostLocationTask != null) {
-            mPostLocationTask.stop();
+            mPostLocationTask.shutdown();
         }
         unregisterReceiver(connectivityChangeReceiver);
 
@@ -297,9 +297,6 @@ public class LocationService extends Service implements ProviderDelegate {
 
         logger.debug("Will start service with: {}", mConfig.toString());
 
-        mPostLocationTask.configure(mConfig);
-        mPostLocationTask.start();
-
         LocationProviderFactory spf = new LocationProviderFactory(this);
         mProvider = spf.getInstance(mConfig.getLocationProvider());
         mProvider.setDelegate(this);
@@ -334,8 +331,6 @@ public class LocationService extends Service implements ProviderDelegate {
 
         Config currentConfig = mConfig;
         mConfig = config;
-
-        mPostLocationTask.configure(mConfig);
 
         if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
             stopForeground(true);
@@ -388,7 +383,7 @@ public class LocationService extends Service implements ProviderDelegate {
     public void onLocation(BackgroundLocation location) {
         logger.debug("New location {}", location.toString());
 
-        mPostLocationTask.enqueue(location);
+        mPostLocationTask.add(location);
 
         Bundle bundle = new Bundle();
         bundle.putParcelable(BackgroundLocation.BUNDLE_KEY, location);
@@ -412,7 +407,7 @@ public class LocationService extends Service implements ProviderDelegate {
     public void onStationary(BackgroundLocation location) {
         logger.debug("New stationary {}", location.toString());
 
-        mPostLocationTask.enqueue(location);
+        mPostLocationTask.add(location);
 
         Bundle bundle = new Bundle();
         bundle.putParcelable(BackgroundLocation.BUNDLE_KEY, location);
@@ -532,138 +527,75 @@ public class LocationService extends Service implements ProviderDelegate {
      * when number of locations reaches syncTreshold.
      *
      */
-    private class PostLocationTask implements SyncQueue.QueueCallback, PostQueue.QueueCallback {
-        private final PostQueue mPostQueue;
-        private final SyncQueue mSyncQueue;
-        private final Thread mPostThread;
-        private volatile boolean mIsInterrupted = false;
+    private class PostLocationTask {
+        private final ExecutorService mExecutor;
+        private final LocationDAO mLocationDAO;
 
         public PostLocationTask(LocationDAO dao) {
-            mPostQueue = new PostQueue(dao, 0);
-            mSyncQueue = new SyncQueue(dao, 0);
-            mPostThread = new Thread(new PostRunnable());
-            mPostThread.setPriority(Thread.MIN_PRIORITY);
-            mPostThread.setName("PostLocationTask");
+            mLocationDAO = dao;
+            mExecutor = Executors.newSingleThreadExecutor();
         }
 
-        public void configure(Config config) {
-            mPostQueue.setQueueSize(config.getMaxLocations());
-            mSyncQueue.setQueueSize(config.getSyncThreshold());
-
-            if (config.hasValidSyncUrl()) {
-                mPostQueue.setCallback(this);
-                mSyncQueue.setCallback(this);
-            } else {
-                mPostQueue.setCallback(null);
-                mSyncQueue.setCallback(null);
-            }
+        public void shutdown() {
+            mExecutor.shutdown();
         }
 
-        public void start() {
-            mPostQueue.clear(); // clears queue -> set all for sync
-            mPostThread.start();
-        }
-
-        public void stop() {
-            if (mIsInterrupted) {
-                return;
-            }
-            mIsInterrupted = true;
-            // Thread will be interrupted set all pending location for sync
-            // NOTE: clear is non standard, but effectively adds locations to sync queue
-            // by updating their status @see PostQueueManager#clear
-            // will call onPostQueueCleared
-            mPostThread.interrupt();
-            mPostQueue.clear();
-        }
-
-        public void enqueue(BackgroundLocation location) {
-            if (mHasConnectivity && mConfig.hasValidUrl()) {
-                synchronized (mPostQueue) {
-                    mPostQueue.add(location);
-                    mPostQueue.notifyAll();
-                }
-            } else {
-                mSyncQueue.add(location);
-            }
-        }
-
-        @Override
-        public void onSyncQueueFull() {
-            if (mConfig.hasValidSyncUrl()) {
-                int locationsCount = mSyncQueue.size();
-                logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mSyncQueue.getQueueSize());
-                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
-            }
-        }
-
-        @Override
-        public void onPostQueueCleared() {
-            if (mConfig.hasValidSyncUrl()) {
-                int locationsCount = mSyncQueue.size();
-                logger.debug("Attempt to sync locations: {} threshold: {}", locationsCount, mSyncQueue.getQueueSize());
-                SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
-            }
-        }
-
-        private class PostRunnable implements Runnable {
-            private boolean postLocation(BackgroundLocation location) {
-                logger.debug("Executing PostLocationTask#postLocation");
-                JSONArray jsonLocations = new JSONArray();
-                Config config = getConfig();
-                try {
-                    jsonLocations.put(config.getTemplate().locationToJson(location));
-                } catch (JSONException e) {
-                    logger.warn("Location to json failed: {}", location.toString());
-                    return false;
-                }
-
-                String url = config.getUrl();
-                logger.debug("Posting json to url: {} headers: {}", url, config.getHttpHeaders());
-                int responseCode;
-
-                try {
-                    responseCode = HttpPostService.postJSON(url, jsonLocations, config.getHttpHeaders());
-                } catch (Exception e) {
-                    mHasConnectivity = isNetworkAvailable();
-                    logger.warn("Error while posting locations: {}", e.getMessage());
-                    return false;
-                }
-
-                if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_CREATED) {
-                    logger.warn("Server error while posting locations responseCode: {}", responseCode);
-                    return false;
-                }
-
-                return true;
-            }
-
-            @Override
-            public void run() {
-                while(!mIsInterrupted) {
-                    synchronized (mPostQueue) {
-                        while (mPostQueue.isEmpty()) {
-                            try {
-                                if (mIsInterrupted) {
-                                    break;
-                                }
-                                mPostQueue.wait();
-                            } catch (InterruptedException e) {
-                                logger.debug("Thread interrupted");
-                                // not interested
-                            }
-                        }
-                    }
-                    if (!mIsInterrupted) {
-                        BackgroundLocation location = mPostQueue.peek();
+        public void add(final BackgroundLocation location) {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    long locationId;
+                    Config config = getConfig();
+                    if (mHasConnectivity && config.hasValidUrl()) {
+                        locationId = mLocationDAO.persistLocation(location, config.getMaxLocations());
                         if (postLocation(location)) {
-                            mPostQueue.remove(location);
+                            mLocationDAO.deleteLocationById(locationId);
+                            return;
                         } else {
-                            mSyncQueue.add(location);
+                            mLocationDAO.updateLocationForSync(locationId);
                         }
+                    } else {
+                        mLocationDAO.persistLocationForSync(location, config.getMaxLocations());
+                    }
+
+                    if (config.hasValidSyncUrl()) {
+                        long syncLocationsCount = mLocationDAO.getLocationsForSyncCount(System.currentTimeMillis());
+                        logger.debug("Attempt to sync locations: {} threshold: {}", syncLocationsCount, config.getSyncThreshold());
+                        SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
                     }
                 }
+            });
+        }
+
+        private boolean postLocation(BackgroundLocation location) {
+            logger.debug("Executing PostLocationTask#postLocation");
+            JSONArray jsonLocations = new JSONArray();
+            Config config = getConfig();
+            try {
+                jsonLocations.put(config.getTemplate().locationToJson(location));
+            } catch (JSONException e) {
+                logger.warn("Location to json failed: {}", location.toString());
+                return false;
             }
+
+            String url = config.getUrl();
+            logger.debug("Posting json to url: {} headers: {}", url, config.getHttpHeaders());
+            int responseCode;
+
+            try {
+                responseCode = HttpPostService.postJSON(url, jsonLocations, config.getHttpHeaders());
+            } catch (Exception e) {
+                mHasConnectivity = isNetworkAvailable();
+                logger.warn("Error while posting locations: {}", e.getMessage());
+                return false;
+            }
+
+            if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_CREATED) {
+                logger.warn("Server error while posting locations responseCode: {}", responseCode);
+                return false;
+            }
+
+            return true;
         }
     }
 

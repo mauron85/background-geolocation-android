@@ -363,6 +363,16 @@ public class SQLiteLocationDAO implements LocationDAO {
       }
   }
 
+  public void updateLocationForSync(long locationId) {
+    ContentValues values = new ContentValues();
+    values.put(LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.SYNC_PENDING);
+
+    String whereClause = LocationEntry._ID + " = ?";
+    String[] whereArgs = { String.valueOf(locationId) };
+
+    db.update(LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
+  }
+
   /**
    * Delete all locations
    *

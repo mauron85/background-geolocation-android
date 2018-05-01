@@ -13,6 +13,7 @@ public interface LocationDAO {
     long persistLocation(BackgroundLocation location);
     long persistLocation(BackgroundLocation location, int maxRows);
     long persistLocationForSync(BackgroundLocation location, int maxRows);
+    void updateLocationForSync(long locationId);
     void deleteLocationById(long locationId);
     BackgroundLocation deleteFirstUnpostedLocation();
     int deleteAllLocations();
