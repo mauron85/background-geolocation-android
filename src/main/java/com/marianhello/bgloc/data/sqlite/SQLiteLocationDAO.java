@@ -217,7 +217,10 @@ public class SQLiteLocationDAO implements LocationDAO {
    * @return rowId or -1 when error occured
    */
   public long persistLocation(BackgroundLocation location, int maxRows) {
-    Long rowId = null;
+    if (maxRows == 0) {
+      return -1;
+    }
+
     String sql = null;
     Boolean shouldVacuum = false;
 
@@ -225,9 +228,7 @@ public class SQLiteLocationDAO implements LocationDAO {
 
     if (rowCount < maxRows) {
       ContentValues values = getContentValues(location);
-      rowId = db.insertOrThrow(LocationEntry.TABLE_NAME, LocationEntry.COLUMN_NAME_NULLABLE, values);
-
-      return rowId;
+      return db.insertOrThrow(LocationEntry.TABLE_NAME, LocationEntry.COLUMN_NAME_NULLABLE, values);
     }
 
     db.beginTransactionNonExclusive();
@@ -247,7 +248,7 @@ public class SQLiteLocationDAO implements LocationDAO {
 
     // get oldest location id to be overwritten
     Cursor cursor = null;
-    Long locationId;
+    long locationId;
     try {
       cursor = db.query(
               LocationEntry.TABLE_NAME,
@@ -329,6 +330,10 @@ public class SQLiteLocationDAO implements LocationDAO {
    * @param locationId
    */
   public void deleteLocationById(long locationId) {
+    if (locationId < 0) {
+      return;
+    }
+
     ContentValues values = new ContentValues();
     values.put(LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.DELETED);
 
@@ -346,21 +351,21 @@ public class SQLiteLocationDAO implements LocationDAO {
   }
 
   public long persistLocationForSync(BackgroundLocation location, int maxRows) {
-      Long locationId = location.getLocationId();
+    Long locationId = location.getLocationId();
 
-      if (locationId == null) {
-        location.setStatus(BackgroundLocation.SYNC_PENDING);
-        return persistLocation(location, maxRows);
-      } else {
-        ContentValues values = new ContentValues();
-        values.put(LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.SYNC_PENDING);
+    if (locationId == null) {
+      location.setStatus(BackgroundLocation.SYNC_PENDING);
+      return persistLocation(location, maxRows);
+    } else {
+      ContentValues values = new ContentValues();
+      values.put(LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.SYNC_PENDING);
 
-        String whereClause = LocationEntry._ID + " = ?";
-        String[] whereArgs = { String.valueOf(locationId) };
+      String whereClause = LocationEntry._ID + " = ?";
+      String[] whereArgs = { String.valueOf(locationId) };
 
-        db.update(LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
-        return locationId;
-      }
+      db.update(LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
+      return locationId;
+    }
   }
 
   public void updateLocationForSync(long locationId) {
