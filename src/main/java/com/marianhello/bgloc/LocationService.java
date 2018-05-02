@@ -560,8 +560,10 @@ public class LocationService extends Service implements ProviderDelegate {
 
                     if (config.hasValidSyncUrl()) {
                         long syncLocationsCount = mLocationDAO.getLocationsForSyncCount(System.currentTimeMillis());
-                        logger.debug("Attempt to sync locations: {} threshold: {}", syncLocationsCount, config.getSyncThreshold());
-                        SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
+                        if (syncLocationsCount >= config.getSyncThreshold()) {
+                            logger.debug("Attempt to sync locations: {} threshold: {}", syncLocationsCount, config.getSyncThreshold());
+                            SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
+                        }
                     }
                 }
             });
