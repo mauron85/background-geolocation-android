@@ -23,7 +23,11 @@ public class LocationTemplateFactory {
             Iterator<?> it = jsonObject.keys();
             while (it.hasNext()) {
                 String key = (String) it.next();
-                templateMap.put(key, jsonObject.get(key));
+                Object value = jsonObject.get(key);
+                if (!(value instanceof String)) {
+                    throw new JSONException("postTemplate key: " + key + " is not String");
+                }
+                templateMap.put(key, value);
             }
 
             return new HashMapLocationTemplate(templateMap);
@@ -31,7 +35,11 @@ public class LocationTemplateFactory {
             ArrayList templateList = new ArrayList();
             JSONArray jsonArray = (JSONArray) json;
             for (int i = 0, size = jsonArray.length(); i < size; i++) {
-                templateList.add(jsonArray.get(i));
+                Object value = jsonArray.get(i);
+                if (!(value instanceof String)) {
+                    throw new JSONException("postTemplate array at index: " + i + " is not String");
+                }
+                templateList.add(value);
             }
 
             return new ArrayListLocationTemplate(templateList);
