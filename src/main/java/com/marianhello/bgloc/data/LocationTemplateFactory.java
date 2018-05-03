@@ -24,7 +24,7 @@ public class LocationTemplateFactory {
                 String key = (String) it.next();
                 Object value = jsonObject.get(key);
                 if (!(value instanceof String)) {
-                    throw new JSONException("postTemplate key: " + key + " is not String");
+                    throw new JSONException("postTemplate key: '" + key + "' is not a string");
                 }
                 templateMap.put(key, value);
             }
@@ -36,7 +36,7 @@ public class LocationTemplateFactory {
             for (int i = 0, size = jsonArray.length(); i < size; i++) {
                 Object value = jsonArray.get(i);
                 if (!(value instanceof String)) {
-                    throw new JSONException("postTemplate array at index: " + i + " is not String");
+                    throw new JSONException("postTemplate array at index: " + i + " is not a string");
                 }
                 templateList.add(value);
             }
