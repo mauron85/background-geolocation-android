@@ -30,7 +30,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     private static final String P_NAME = " com.marianhello.bgloc";
     private static final String DETECTED_ACTIVITY_UPDATE = P_NAME + ".DETECTED_ACTIVITY_UPDATE";
 
-    private PowerManager.WakeLock wakeLock;
     private GoogleApiClient googleApiClient;
     private PendingIntent detectedActivitiesPI;
 
@@ -48,10 +47,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     @Override
     public void onCreate() {
         super.onCreate();
-
-        PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-        wakeLock.acquire();
 
         Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE);
         detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -265,7 +260,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
         onStop();
         disconnectFromPlayAPI();
         unregisterReceiver(detectedActivitiesReceiver);
-        wakeLock.release();
         super.onDestroy();
     }
 }

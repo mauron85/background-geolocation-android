@@ -56,8 +56,6 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     private Boolean isAcquiringSpeed = false;
     private Integer locationAcquisitionAttempts = 0;
 
-    private PowerManager.WakeLock wakeLock;
-
     private Location lastLocation;
     private Location stationaryLocation;
     private float stationaryRadius;
@@ -102,10 +100,6 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         // One-shot PI (TODO currently unused)
         singleUpdatePI = PendingIntent.getBroadcast(mContext, 0, new Intent(SINGLE_LOCATION_UPDATE_ACTION), PendingIntent.FLAG_CANCEL_CURRENT);
         registerReceiver(singleUpdateReceiver, new IntentFilter(SINGLE_LOCATION_UPDATE_ACTION));
-
-        PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-        wakeLock.acquire();
 
         // Location criteria
         criteria = new Criteria();
@@ -548,7 +542,6 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         unregisterReceiver(stationaryRegionReceiver);
         unregisterReceiver(stationaryLocationMonitorReceiver);
 
-        wakeLock.release();
         super.onDestroy();
     }
 }
