@@ -25,7 +25,7 @@ allprojects {
 
 android {
     compileSdkVersion 26
-    buildToolsVersion "26.0.1"
+    buildToolsVersion "26.0.2"
     publishNonDefault true
 
     defaultConfig {
@@ -36,25 +36,34 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    flavorDimensions "default"
+
     productFlavors {
         preoreo {
+            dimension "default"
             targetSdkVersion 23
         }
         oreo {
+            dimension "default"
             versionNameSuffix 'oreo'
             targetSdkVersion 26
         }
     }
     buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-     compileOptions {
-         sourceCompatibility JavaVersion.VERSION_1_6
-         targetCompatibility JavaVersion.VERSION_1_6
-     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_6
+        targetCompatibility JavaVersion.VERSION_1_6
+    }
 
     testOptions {
         unitTests.returnDefaultValues = true
@@ -64,9 +73,9 @@ android {
     }
 }
 dependencies {
-    androidTestCompile 'com.android.support:support-annotations:23.1.1'
-    androidTestCompile 'com.android.support.test:runner:0.5'
-    androidTestCompile 'com.android.support.test:rules:0.5'
+    androidTestCompile 'com.android.support:support-annotations:27.1.1'
+    androidTestCompile 'com.android.support.test:runner:1.0.2'
+    androidTestCompile 'com.android.support.test:rules:1.0.2'
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     testCompile 'org.json:json:20140107'
