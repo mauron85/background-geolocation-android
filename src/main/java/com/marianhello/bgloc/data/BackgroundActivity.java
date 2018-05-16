@@ -13,8 +13,6 @@ import org.json.JSONObject;
  */
 
 public class BackgroundActivity implements Parcelable {
-    public static final String BUNDLE_KEY = "activity";
-
     private int confidence;
     private int type;
 

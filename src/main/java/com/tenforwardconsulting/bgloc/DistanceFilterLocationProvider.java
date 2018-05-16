@@ -22,11 +22,10 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.PowerManager;
 
+import com.marianhello.bgloc.BackgroundGeolocationFacade;
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.provider.AbstractLocationProvider;
-import com.marianhello.logging.LoggerManager;
 import com.marianhello.utils.Tone;
 
 import java.util.List;
@@ -37,6 +36,7 @@ import static java.lang.Math.round;
 
 
 public class DistanceFilterLocationProvider extends AbstractLocationProvider implements LocationListener {
+
     private static final String TAG = DistanceFilterLocationProvider.class.getSimpleName();
     private static final String P_NAME = "com.tenforwardconsulting.cordova.bgloc";
 
@@ -117,8 +117,8 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
 
         logger.info("Start recording");
         scaledDistanceFilter = mConfig.getDistanceFilter();
-        setPace(false);
         isStarted = true;
+        setPace(false);
     }
 
     @Override
@@ -137,14 +137,14 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         }
     }
 
-//    @Override
-//    public void onCommand(int mode) {
-//        if (mode == BackgroundGeolocationFacade.BACKGROUND_MODE) {
-//            setPace(false);
-//        } else if (mode == BackgroundGeolocationFacade.FOREGROUND_MODE) {
-//            setPace(true);
-//        }
-//    }
+    @Override
+    public void onCommand(int commandId, int arg1) {
+        switch(commandId) {
+            case CMD_SWITCH_MODE:
+                setPace(arg1 == BackgroundGeolocationFacade.BACKGROUND_MODE ? false : true);
+                return;
+        }
+    }
 
     @Override
     public void onConfigure(Config config) {
@@ -165,6 +165,10 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
      * @param value set true to engage "aggressive", battery-consuming tracking, false for stationary-region tracking
      */
     private void setPace(Boolean value) {
+        if (!isStarted) {
+            return;
+        }
+
         logger.info("Setting pace: {}", value);
 
         Boolean wasMoving   = isMoving;

@@ -11,7 +11,6 @@ package com.marianhello.bgloc;
 
 import android.accounts.Account;
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -20,6 +19,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -27,9 +27,8 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.Messenger;
 import android.os.Process;
-import android.os.RemoteException;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
@@ -49,86 +48,53 @@ import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.logging.UncaughtExceptionLogger;
 
+import org.chromium.content.browser.ThreadUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class LocationService extends Service implements ProviderDelegate {
 
-    /** Keeps track of all current registered clients. */
-    HashMap<Integer, Messenger> mClients = new HashMap();
+    public static final String ACTION_BROADCAST = ".broadcast";
 
     /**
      * Command sent by the service to
      * any registered clients with error.
      */
-    public static final int MSG_ERROR = 1;
-
-    /**
-     * Command to the service to register a client, receiving callbacks
-     * from the service.  The Message's replyTo field must be a Messenger of
-     * the client where callbacks should be sent.
-     */
-    public static final int MSG_REGISTER_CLIENT = 2;
-
-    /**
-     * Command to the service to unregister a client, to stop receiving callbacks
-     * from the service.  The Message's replyTo field must be a Messenger of
-     * the client as previously given with MSG_REGISTER_CLIENT.
-     */
-    public static final int MSG_UNREGISTER_CLIENT = 3;
+    public static final int MSG_ON_ERROR = 100;
 
     /**
      * Command sent by the service to
      * any registered clients with the new position.
      */
-    public static final int MSG_LOCATION_UPDATE = 4;
+    public static final int MSG_ON_LOCATION = 101;
 
     /**
      * Command sent by the service to
      * any registered clients whenever the devices enters "stationary-mode"
      */
-    public static final int MSG_ON_STATIONARY = 5;
-
-    /**
-     * Command to the active location provider
-     */
-    public static final int MSG_EXEC_COMMAND = 6;
-
-    /**
-     * @Deprecated use MSG_EXEC_COMMAND instead
-     * Command to the service to indicate operation mode has been changed
-     */
-    public static final int MSG_SWITCH_MODE = MSG_EXEC_COMMAND;
-
-    /**
-     * Command to the service to indicate configuration has been changed
-     */
-    public static final int MSG_CONFIGURE = 7;
+    public static final int MSG_ON_STATIONARY = 102;
 
     /**
      * Command sent by the service to
      * any registered clients with new detected activity.
      */
-    public static final int MSG_ON_ACTIVITY = 8;
+    public static final int MSG_ON_ACTIVITY = 103;
 
-    /**
-     * Command to the service to register headless task
-     */
-    public static final int MSG_REGISTER_HEADLESS_TASK = 9;
+    public static final int MSG_ON_SERVICE_STOPPED = 104;
 
-    /** indicate if service is running */
-    private static Boolean isRunning = false;
+    public static final int MSG_ON_SERVICE_STARTED = 105;
+
+    public static final int SERVICE_STOPPED = 0;
+    public static final int SERVICE_STARTED = 1;
+
+    private static int sServiceStatus = SERVICE_STOPPED;
 
     /** notification id */
-    private static int NOTIF_ID = 1;
-
-    private static final int ONE_MINUTE_IN_MILLIS = 1000 * 60;
+    private static int NOTIFICATION_ID = 1;
 
     private ResourceResolver mResolver;
     private LocationDAO mLocationDAO;
@@ -136,10 +102,11 @@ public class LocationService extends Service implements ProviderDelegate {
     private LocationProvider mProvider;
     private Account mSyncAccount;
     private boolean mHasConnectivity = true;
-    private boolean mHasBoundClients = false;
+    private boolean mIsBound = false;
 
     private org.slf4j.Logger logger;
 
+    private final IBinder mBinder = new LocalBinder();
     private volatile HandlerThread mHandlerThread;
     private ServiceHandler mServiceHandler;
     private HeadlessTaskRunner mHeadlessTaskRunner;
@@ -152,42 +119,9 @@ public class LocationService extends Service implements ProviderDelegate {
 
         @Override
         public void handleMessage(Message msg) {
+            super.handleMessage(msg);
         }
     }
-
-    /**
-     * Handler of incoming messages from clients.
-     */
-    private class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            logger.debug("Handler received message: {}", msg);
-            switch (msg.what) {
-                case MSG_REGISTER_CLIENT:
-                    mClients.put(msg.arg1, msg.replyTo);
-                    break;
-                case MSG_UNREGISTER_CLIENT:
-                    mClients.remove(msg.arg1);
-                    break;
-                case MSG_EXEC_COMMAND:
-                    sendCommand(msg.arg1);
-                    break;
-                case MSG_CONFIGURE:
-                    configure(msg.getData());
-                    break;
-                case MSG_REGISTER_HEADLESS_TASK:
-                    registerHeadlessTask(msg.getData());
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
-    }
-
-    /**
-     * Target we publish for clients to send messages to IncomingHandler.
-     */
-    final Messenger messenger = new Messenger(new IncomingHandler());
 
     /**
      * When binding to the service, we return an interface to our messenger
@@ -195,17 +129,39 @@ public class LocationService extends Service implements ProviderDelegate {
      */
     @Override
     public IBinder onBind(Intent intent) {
-        logger.debug("Client bind to service");
-        mHasBoundClients = true;
-        return messenger.getBinder();
+        logger.debug("Client binds to service");
+
+        stopForeground(true);
+        mIsBound = true;
+        return mBinder;
+    }
+
+    @Override
+    public void onRebind(Intent intent) {
+        logger.debug("Client rebinds to service");
+
+        stopForeground(true);
+        mIsBound = true;
+        super.onRebind(intent);
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
         // All clients have unbound with unbindService()
-        logger.debug("All clients have unbound from service");
-        mHasBoundClients = false;
-        return false;
+        logger.debug("All clients have been unbound from service");
+
+        Config config = getConfig();
+        if (isStarted()) {
+            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
+                    config.getNotificationTitle(),
+                    config.getNotificationText(),
+                    config.getLargeNotificationIcon(),
+                    config.getSmallNotificationIcon(),
+                    config.getNotificationIconColor());
+            startForeground(NOTIFICATION_ID, notification);
+        }
+        mIsBound = false;
+        return true; // Ensures onRebind() is called when a client re-binds.
     }
 
     @Override
@@ -221,7 +177,7 @@ public class LocationService extends Service implements ProviderDelegate {
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.  We also make it
         // background priority so CPU-intensive work will not disrupt our UI.
-        mHandlerThread = new HandlerThread("LocationService.HandlerThread", Process.THREAD_PRIORITY_BACKGROUND);
+        mHandlerThread = new HandlerThread("LocationService.Thread", Process.THREAD_PRIORITY_BACKGROUND);
         mHandlerThread.start();
         // An Android service handler is a handler running on a specific background thread.
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
@@ -258,7 +214,6 @@ public class LocationService extends Service implements ProviderDelegate {
         }
         unregisterReceiver(connectivityChangeReceiver);
 
-        isRunning = false;
         super.onDestroy();
     }
 
@@ -278,21 +233,12 @@ public class LocationService extends Service implements ProviderDelegate {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        logger.info("Received start command startId: {} intent: {}", startId, intent);
+        logger.info("Service started");
 
-        if (mProvider != null) {
-            mProvider.onDestroy();
-        }
-
-        if (intent == null) {
-            //service has been probably restarted so we need to load config from db
+        if (mConfig == null) {
+            logger.warn("Attempt to start unconfigured service. Will use stored or default.");
             mConfig = getConfig();
-        } else {
-            if (intent.hasExtra("config")) {
-                mConfig = intent.getParcelableExtra("config");
-            } else {
-                mConfig = Config.getDefault(); //using default config
-            }
+            // TODO: throw JSONException if config cannot be obtained from db
         }
 
         logger.debug("Will start service with: {}", mConfig.toString());
@@ -304,78 +250,79 @@ public class LocationService extends Service implements ProviderDelegate {
         mProvider.onConfigure(mConfig);
         mProvider.onStart();
 
-        if (mConfig.getStartForeground()) {
-            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
-                    mConfig.getNotificationTitle(),
-                    mConfig.getNotificationText(),
-                    mConfig.getLargeNotificationIcon(),
-                    mConfig.getSmallNotificationIcon(),
-                    mConfig.getNotificationIconColor());
-            startForeground(NOTIF_ID, notification);
-        }
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_SERVICE_STARTED);
+        broadcastMessage(bundle);
 
-        isRunning = true;
+        sServiceStatus = SERVICE_STARTED;
 
-        //We want this service to continue running until it is explicitly stopped
+        // We want this service to continue running until it is explicitly stopped
         return START_STICKY;
     }
 
-    private void sendCommand(int mode) {
-        mProvider.onCommand(mode);
-    }
-
-    private void configure(Config config) {
-        if (!isRunning()) {
-            return; // do not configure stopped service it will be configured when started
+    public synchronized void start() {
+        if (isStarted()) {
+            return; // service was already started;
         }
 
-        Config currentConfig = mConfig;
+        Intent locationServiceIntent = new Intent(getApplicationContext(), LocationService.class);
+//        locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
+        // start service to keep service running even if no clients are bound to it
+        startService(locationServiceIntent);
+
+        sServiceStatus = SERVICE_STARTED;
+    }
+
+    public synchronized void stop() {
+        if (!isStarted()) {
+            return;
+        }
+
+        if (mProvider != null) {
+            mProvider.onStop();
+        }
+
+        stopSelf();
+
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_SERVICE_STOPPED);
+        broadcastMessage(bundle);
+
+        sServiceStatus = SERVICE_STOPPED;
+    }
+
+    public void configure(Config config) {
+        if (mConfig == null) {
+            mConfig = config;
+            return;
+        }
+
+        final Config currentConfig = mConfig;
         mConfig = config;
 
-        if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
-            stopForeground(true);
-        }
-
-        if (mConfig.getStartForeground() == true) {
-            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
-                    mConfig.getNotificationTitle(),
-                    mConfig.getNotificationText(),
-                    mConfig.getLargeNotificationIcon(),
-                    mConfig.getSmallNotificationIcon(),
-                    mConfig.getNotificationIconColor());
-
-            if (currentConfig.getStartForeground() == false) {
-                startForeground(NOTIF_ID, notification);
-            } else {
-                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                notificationManager.notify(NOTIF_ID, notification);
+        ThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (currentConfig.getLocationProvider() != mConfig.getLocationProvider()) {
+                    boolean shouldStart = mProvider.isStarted();
+                    mProvider.onDestroy();
+                    LocationProviderFactory spf = new LocationProviderFactory(LocationService.this);
+                    mProvider = spf.getInstance(mConfig.getLocationProvider());
+                    mProvider.setDelegate(LocationService.this);
+                    mProvider.onCreate();
+                    mProvider.onConfigure(mConfig);
+                    if (shouldStart) {
+                        mProvider.onStart();
+                    }
+                } else {
+                    mProvider.onConfigure(mConfig);
+                }
             }
-        }
-
-        if (currentConfig.getLocationProvider() != mConfig.getLocationProvider()) {
-            boolean shouldStart = mProvider.isStarted();
-            mProvider.onDestroy();
-            LocationProviderFactory spf = new LocationProviderFactory(this);
-            mProvider = spf.getInstance(mConfig.getLocationProvider());
-            mProvider.setDelegate(this);
-            mProvider.onCreate();
-            mProvider.onConfigure(mConfig);
-            if (shouldStart) {
-                mProvider.onStart();
-            }
-        } else {
-            mProvider.onConfigure(mConfig);
-        }
+        });
     }
 
-    private void configure(Bundle bundle) {
-        Config config = bundle.getParcelable(Config.BUNDLE_KEY);
-        configure(config);
-    }
-
-    private void registerHeadlessTask(Bundle bundle) {
+    public void registerHeadlessTask(String jsFunction) {
         logger.debug("Registering headless task");
-        String jsFunction = bundle.getString(HeadlessTaskRunner.BUNDLE_KEY);
         mHeadlessTaskRunner = new HeadlessTaskRunner(this);
         mHeadlessTaskRunner.setFunction(jsFunction);
     }
@@ -386,11 +333,10 @@ public class LocationService extends Service implements ProviderDelegate {
         mPostLocationTask.add(location);
 
         Bundle bundle = new Bundle();
-        bundle.putParcelable(BackgroundLocation.BUNDLE_KEY, location);
-        Message msg = Message.obtain(null, MSG_LOCATION_UPDATE);
-        msg.setData(bundle);
+        bundle.putInt("action", MSG_ON_LOCATION);
+        bundle.putParcelable("payload", location);
+        broadcastMessage(bundle);
 
-        sendClientMessage(msg);
         runHeadlessTask(new LocationTask(location) {
             @Override
             public void onError(String errorMessage) {
@@ -410,11 +356,10 @@ public class LocationService extends Service implements ProviderDelegate {
         mPostLocationTask.add(location);
 
         Bundle bundle = new Bundle();
-        bundle.putParcelable(BackgroundLocation.BUNDLE_KEY, location);
-        Message msg = Message.obtain(null, MSG_ON_STATIONARY);
-        msg.setData(bundle);
+        bundle.putInt("action", MSG_ON_STATIONARY);
+        bundle.putParcelable("payload", location);
+        broadcastMessage(bundle);
 
-        sendClientMessage(msg);
         runHeadlessTask(new StationaryTask(location){
             @Override
             public void onError(String errorMessage) {
@@ -432,11 +377,10 @@ public class LocationService extends Service implements ProviderDelegate {
         logger.debug("New activity {}", activity.toString());
 
         Bundle bundle = new Bundle();
-        bundle.putParcelable(BackgroundActivity.BUNDLE_KEY, activity);
-        Message msg = Message.obtain(null, MSG_ON_ACTIVITY);
-        msg.setData(bundle);
+        bundle.putInt("action", MSG_ON_ACTIVITY);
+        bundle.putParcelable("payload", activity);
+        broadcastMessage(bundle);
 
-        sendClientMessage(msg);
         runHeadlessTask(new ActivityTask(activity){
             @Override
             public void onError(String errorMessage) {
@@ -450,19 +394,30 @@ public class LocationService extends Service implements ProviderDelegate {
         });
     }
 
-    public void sendClientMessage(Message msg) {
-        Iterator<Messenger> it = mClients.values().iterator();
-        while (it.hasNext()) {
-            try {
-                Messenger client = it.next();
-                client.send(msg);
-            } catch (RemoteException e) {
-                // The client is dead.  Remove it from the list;
-                // we are going through the list from back to front
-                // so this is safe to do inside the loop.
-                it.remove();
-            }
+    public void onError(PluginException error) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_ERROR);
+        bundle.putBundle("payload", error.toBundle());
+        broadcastMessage(bundle);
+    }
+
+    public void broadcastMessage(Bundle bundle) {
+        Intent intent = new Intent(ACTION_BROADCAST);
+        intent.putExtras(bundle);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    public void executeProviderCommand(final int command, final int arg1) {
+        if (mProvider == null) {
+            return;
         }
+
+        ThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProvider.onCommand(command, arg1);
+            }
+        });
     }
 
     @Override
@@ -475,31 +430,27 @@ public class LocationService extends Service implements ProviderDelegate {
         super.unregisterReceiver(receiver);
     }
 
-    public void onError(PluginException error) {
-        Message msg = Message.obtain(null, MSG_ERROR);
-        msg.setData(error.toBundle());
-        sendClientMessage(msg);
-    }
-
     public Config getConfig() {
-        if (mConfig == null) {
+        Config config = mConfig;
+        if (config == null) {
             ConfigurationDAO dao = DAOFactory.createConfigurationDAO(this);
             try {
-                mConfig = dao.retrieveConfiguration();
+                config = dao.retrieveConfiguration();
             } catch (JSONException e) {
                 logger.error("Config exception: {}", e.getMessage());
-                mConfig = Config.getDefault(); //using default config
             }
         }
+
+        if (config == null) {
+            config = Config.getDefault();
+        }
+
+        mConfig = config;
         return mConfig;
     }
 
-//    public void setConfig(Config config) {
-//        this.mConfig = config;
-//    }
-
     private void runHeadlessTask(Task task) {
-        if (mHasBoundClients) { // only run headless task if there are no bound clients (activity)
+        if (mIsBound) { // only run headless task if there are no bound clients (activity)
             return;
         }
 
@@ -510,6 +461,16 @@ public class LocationService extends Service implements ProviderDelegate {
         }
 
         mHeadlessTaskRunner.runTask(task);
+    }
+
+    /**
+     * Class used for the client Binder.  Since this service runs in the same process as its
+     * clients, we don't need to deal with IPC.
+     */
+    public class LocalBinder extends Binder {
+        LocationService getService() {
+            return LocationService.this;
+        }
     }
 
     /**
@@ -619,7 +580,7 @@ public class LocationService extends Service implements ProviderDelegate {
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
-    public static boolean isRunning() {
-        return LocationService.isRunning;
+    public static boolean isStarted() {
+        return sServiceStatus == SERVICE_STARTED;
     }
 }

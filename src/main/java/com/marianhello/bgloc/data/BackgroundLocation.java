@@ -11,8 +11,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class BackgroundLocation implements Parcelable {
-    public static final String BUNDLE_KEY = "location";
-
     public static final int DELETED = 0;
     public static final int POST_PENDING = 1;
     public static final int SYNC_PENDING = 2;

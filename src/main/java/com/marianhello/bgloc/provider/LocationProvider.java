@@ -16,11 +16,13 @@ import com.marianhello.bgloc.Config;
  */
 public interface LocationProvider {
 
+    int CMD_SWITCH_MODE = 1;
+
     void onCreate();
     void onDestroy();
     void onStart();
     void onStop();
-    void onCommand(int mode);
+    void onCommand(int commandId, int arg1);
     void onConfigure(Config config);
     void setDelegate(ProviderDelegate delegate);
     boolean isStarted();

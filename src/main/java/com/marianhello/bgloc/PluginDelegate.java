@@ -12,7 +12,6 @@ public interface PluginDelegate {
     void onLocationChanged(BackgroundLocation location);
     void onStationaryChanged(BackgroundLocation location);
     void onActitivyChanged(BackgroundActivity activity);
-    void onLocationPause();
-    void onLocationResume();
+    void onServiceStatusChanged(int status);
     void onError(PluginException error);
 }

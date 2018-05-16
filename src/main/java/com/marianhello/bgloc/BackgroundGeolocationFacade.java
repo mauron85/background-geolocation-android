@@ -15,13 +15,13 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
+import android.telecom.Call;
 import android.text.TextUtils;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
@@ -29,7 +29,7 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
-import com.marianhello.bgloc.headless.HeadlessTaskRunner;
+import com.marianhello.bgloc.provider.LocationProvider;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.DBLogReader;
@@ -37,10 +37,16 @@ import com.marianhello.logging.LogEntry;
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.logging.UncaughtExceptionLogger;
 
+import org.chromium.content.browser.ThreadUtils;
 import org.json.JSONException;
 import org.slf4j.event.Level;
 
 import java.util.Collection;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class BackgroundGeolocationFacade {
 
@@ -50,156 +56,62 @@ public class BackgroundGeolocationFacade {
     public static final int AUTHORIZATION_AUTHORIZED = 1;
     public static final int AUTHORIZATION_DENIED = 0;
 
-    public static final String[] PERMISSIONS = { Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
-
-    private static final int MESSENGER_CLIENT_ID = 666;
+    public static final String[] PERMISSIONS = {
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+    };
 
     private Context mContext;
-    private final Handler mMainhandler;
-    /** Messenger for communicating with the service. */
-    private Messenger mService = null;
+    private LocationService mService = null;
     /** Flag indicating whether we have called bind on the service. */
-    private Boolean mIsBound = false;
-    private Boolean mLocationModeChangeReceiverRegistered = false;
-    private Config mConfig = null;
-    private final PluginDelegate mDelegate;
-    private String mHeadlessJsFunction;
-    private int mMode = FOREGROUND_MODE;
+    private boolean mIsBound = false;
+    private ServiceConnection mServiceConnection;
+    private long mServiceConnectionTimeout = 10000;
+    private TimeUnit mServiceConnectionTimeUnit = TimeUnit.MILLISECONDS;
+    private boolean mServiceBroadcastReceiverRegistered = false;
+    private boolean mLocationModeChangeReceiverRegistered = false;
+
     private final Object mLock = new Object();
+    private final PluginDelegate mDelegate;
 
     private BackgroundLocation mStationaryLocation;
 
     private org.slf4j.Logger logger;
 
-    Messenger mMessenger;
-
     public BackgroundGeolocationFacade(Context context, PluginDelegate delegate) {
         mContext = context;
         mDelegate = delegate;
 
-        UncaughtExceptionLogger.register(context);
+        UncaughtExceptionLogger.register(context.getApplicationContext());
 
         logger = LoggerManager.getLogger(BackgroundGeolocationFacade.class);
         LoggerManager.enableDBLogging();
 
         logger.info("Initializing plugin");
 
-        mMainhandler = new Handler(context.getMainLooper());
-        NotificationHelper.registerAllChannels(getContext());
-    }
-
-    public void init() {
-        mMode = FOREGROUND_MODE;
-        if (LocationService.isRunning()) {
-            if (!mIsBound) {
-                safeBindService();
-            }
-            if (!mLocationModeChangeReceiverRegistered) {
-                registerLocationModeChangeReceiver();
-            }
-        }
-    }
-
-    public void onAppDestroy() {
-        logger.info("Destroying plugin");
-
-        unregisterLocationModeChangeReceiver();
-        // Unbind from the service
-        safeUnbindService();
-        if (mConfig == null || mConfig.getStopOnTerminate()) {
-            stopBackgroundService();
-        }
-    }
-
-    /**
-     * Handler of incoming messages from service.
-     */
-    private class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            Bundle bundle;
-            BackgroundLocation location;
-            BackgroundActivity activity;
-            switch (msg.what) {
-                case LocationService.MSG_LOCATION_UPDATE:
-                    logger.debug("Received MSG_LOCATION_UPDATE");
-                    bundle = msg.getData();
-                    bundle.setClassLoader(LocationService.class.getClassLoader());
-                    location = (BackgroundLocation) bundle.getParcelable(BackgroundLocation.BUNDLE_KEY);
-                    mDelegate.onLocationChanged(location);
-
-                    break;
-                case LocationService.MSG_ON_STATIONARY:
-                    logger.debug("Received MSG_ON_STATIONARY");
-                    bundle = msg.getData();
-                    bundle.setClassLoader(LocationService.class.getClassLoader());
-                    location = (BackgroundLocation) bundle.getParcelable(BackgroundLocation.BUNDLE_KEY);
-                    mStationaryLocation = location;
-                    mDelegate.onStationaryChanged(location);
-
-                    break;
-                case LocationService.MSG_ON_ACTIVITY:
-                    logger.debug("Received MSG_ON_ACTIVITY");
-                    bundle = msg.getData();
-                    bundle.setClassLoader(LocationService.class.getClassLoader());
-                    activity = (BackgroundActivity) bundle.getParcelable(BackgroundActivity.BUNDLE_KEY);
-                    mDelegate.onActitivyChanged(activity);
-
-                    break;
-                case LocationService.MSG_ERROR:
-                    logger.debug("Received MSG_ERROR");
-                    bundle = msg.getData();
-                    bundle.setClassLoader(LocationService.class.getClassLoader());
-                    Integer errorCode = bundle.getInt("code");
-                    String errorMessage = bundle.getString("message");
-                    mDelegate.onError(new PluginException(errorMessage, errorCode));
-
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
+        NotificationHelper.registerAllChannels(context.getApplicationContext());
     }
 
     /**
      * Class for interacting with the main interface of the service.
      */
-    private ServiceConnection mConnection = new ServiceConnection() {
+    private class LocationServiceConnection implements ServiceConnection {
         public void onServiceConnected(ComponentName className, IBinder service) {
             // This is called when the connection with the service has been
             // established, giving us the object we can use to
             // interact with the service.  We are communicating with the
             // service using a Messenger, so here we get a client-side
             // representation of that from the raw IBinder object.
-            mService = new Messenger(service);
+            logger.debug("Service connected");
+            LocationService.LocalBinder binder = (LocationService.LocalBinder) service;
+            mService = binder.getService();
             mIsBound = true;
-
-            // We want to monitor the service for as long as we are
-            // connected to it.
-            try {
-                Message msg = Message.obtain(null,
-                        LocationService.MSG_REGISTER_CLIENT);
-                msg.replyTo = mMessenger;
-                msg.arg1 = MESSENGER_CLIENT_ID;
-                mService.send(msg);
-
-                switchMode(mMode);
-
-                if (mHeadlessJsFunction != null) {
-                    registerHeadlessTask(mHeadlessJsFunction);
-                }
-
-            } catch (RemoteException e) {
-                // In this case the service has crashed before we could even
-                // do anything with it; we can count on soon being
-                // disconnected (and then reconnected if it can be restarted)
-                // so there is no need to do anything here.
-            }
         }
 
         public void onServiceDisconnected(ComponentName className) {
             // This is called when the connection with the service has been
             // unexpectedly disconnected -- that is, its process crashed.
+            logger.debug("Service disconnected");
             mService = null;
             mIsBound = false;
         }
@@ -213,16 +125,67 @@ public class BackgroundGeolocationFacade {
         }
     };
 
+    private BroadcastReceiver serviceBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle bundle = intent.getExtras();
+            int action = bundle.getInt("action");
+
+            switch (action) {
+                case LocationService.MSG_ON_LOCATION: {
+                    logger.debug("Received MSG_ON_LOCATION");
+                    bundle.setClassLoader(LocationService.class.getClassLoader());
+                    BackgroundLocation location = (BackgroundLocation) bundle.getParcelable("payload");
+                    mDelegate.onLocationChanged(location);
+                    return;
+                }
+                case LocationService.MSG_ON_STATIONARY: {
+                    logger.debug("Received MSG_ON_STATIONARY");
+                    bundle.setClassLoader(LocationService.class.getClassLoader());
+                    BackgroundLocation location = (BackgroundLocation) bundle.getParcelable("payload");
+                    mStationaryLocation = location;
+                    mDelegate.onStationaryChanged(location);
+                    return;
+                }
+                case LocationService.MSG_ON_ACTIVITY: {
+                    logger.debug("Received MSG_ON_ACTIVITY");
+                    bundle.setClassLoader(LocationService.class.getClassLoader());
+                    BackgroundActivity activity = (BackgroundActivity) bundle.getParcelable("payload");
+                    mDelegate.onActitivyChanged(activity);
+                    return;
+                }
+                case LocationService.MSG_ON_ERROR: {
+                    logger.debug("Received MSG_ON_ERROR");
+                    Bundle errorBundle = bundle.getBundle("payload");
+                    Integer errorCode = errorBundle.getInt("code");
+                    String errorMessage = errorBundle.getString("message");
+                    mDelegate.onError(new PluginException(errorMessage, errorCode));
+                    return;
+                }
+                case LocationService.MSG_ON_SERVICE_STARTED: {
+                    logger.debug("Received MSG_ON_SERVICE_STARTED");
+                    mDelegate.onServiceStatusChanged(LocationService.SERVICE_STARTED);
+                    return;
+                }
+                case LocationService.MSG_ON_SERVICE_STOPPED: {
+                    logger.debug("Received MSG_ON_SERVICE_STOPPED");
+                    mDelegate.onServiceStatusChanged(LocationService.SERVICE_STOPPED);
+                    return;
+                }
+            }
+        }
+    };
+
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    private synchronized void registerLocationModeChangeReceiver () {
+    private synchronized void registerLocationModeChangeReceiver() {
         if (mLocationModeChangeReceiverRegistered) return;
 
         getContext().registerReceiver(locationModeChangeReceiver, new IntentFilter(LocationManager.MODE_CHANGED_ACTION));
         mLocationModeChangeReceiverRegistered = true;
     }
 
-    private synchronized void unregisterLocationModeChangeReceiver () {
-        if (mLocationModeChangeReceiverRegistered == false) return;
+    private synchronized void unregisterLocationModeChangeReceiver() {
+        if (!mLocationModeChangeReceiverRegistered) return;
 
         Context context = getContext();
         if (context != null) {
@@ -231,18 +194,88 @@ public class BackgroundGeolocationFacade {
         mLocationModeChangeReceiverRegistered = false;
     }
 
+    private synchronized void registerServiceBroadcast() {
+        if (mServiceBroadcastReceiverRegistered) return;
+
+        LocalBroadcastManager.getInstance(getContext()).registerReceiver(serviceBroadcastReceiver, new IntentFilter(LocationService.ACTION_BROADCAST));
+        mServiceBroadcastReceiverRegistered = true;
+    }
+
+    private synchronized void unregisterServiceBroadcast() {
+        if (!mServiceBroadcastReceiverRegistered) return;
+
+        Context context = getContext();
+        if (context != null) {
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(serviceBroadcastReceiver);
+        }
+
+        mServiceBroadcastReceiverRegistered = false;
+    }
+
     public void start() {
         logger.debug("Starting service");
-        startAndBindBackgroundService();
         // watch location mode changes
         registerLocationModeChangeReceiver();
+        registerServiceBroadcast();
+        startBackgroundService();
     }
 
     public void stop() {
         logger.debug("Stopping service");
-        unregisterLocationModeChangeReceiver();
         stopBackgroundService();
-        safeUnbindService();
+        unregisterLocationModeChangeReceiver();
+//        unregisterServiceBroadcast();
+    }
+
+    public void pause() {
+        switchMode(BackgroundGeolocationFacade.BACKGROUND_MODE);
+        unbindService();
+    }
+
+    public void resume() {
+        registerServiceBroadcast();
+        if (LocationService.isStarted()) {
+            registerLocationModeChangeReceiver();
+        }
+
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    bindService();
+                } catch (TimeoutException e) {
+                    logger.warn("Connection to service timed out", e);
+                } finally {
+                    switchMode(BackgroundGeolocationFacade.FOREGROUND_MODE);
+                }
+            }
+        };
+
+        synchronized (mLock) {
+            if (ThreadUtils.runningOnUiThread()) {
+                new Thread(r).start();
+            } else {
+                r.run();
+            }
+        }
+    }
+
+    public void destroy() {
+        logger.info("Destroying plugin");
+
+        unregisterLocationModeChangeReceiver();
+        unregisterServiceBroadcast();
+
+        try {
+            if (getConfig().getStopOnTerminate()) {
+                stopBackgroundService();
+            }
+        } catch (PluginException e) {
+            logger.debug("Error occurred while destroying plugin", e);
+        } finally {
+            // Unbind from the service
+            unbindService();
+        }
     }
 
     public Collection<BackgroundLocation> getLocations() {
@@ -271,52 +304,27 @@ public class BackgroundGeolocationFacade {
         dao.deleteAllLocations();
     }
 
-    public void switchMode(int mode) {
-        mMode = mode;
-        if (LocationService.isRunning()) {
-            if (!mIsBound) {
-                safeBindService();
-            }
-            if (!mLocationModeChangeReceiverRegistered) {
-                registerLocationModeChangeReceiver();
-            }
+    public void switchMode(final int mode) {
+        synchronized (mLock) {
+            mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
         }
-        Message msg = Message.obtain(null, LocationService.MSG_SWITCH_MODE);
-        msg.replyTo = mMessenger;
-        msg.arg1 = mode;
-        serviceSend(msg);
     }
 
-    public void sendCommand(int commandId) {
-        Message msg = Message.obtain(null, LocationService.MSG_EXEC_COMMAND);
-        msg.replyTo = mMessenger;
-        msg.arg1 = commandId;
-        serviceSend(msg);
+    public void sendCommand(final int commandId) {
+        synchronized (mLock) {
+            mService.executeProviderCommand(commandId, 0);
+        }
     }
 
-    public void configure(Config newConfig) throws PluginException {
-        Config config;
-
+    public void configure(Config config) throws PluginException {
         synchronized (mLock) {
             try {
-                config = getConfig();
-            } catch (PluginException e) {
-                config = Config.getDefault();
-            }
-
-            try {
-                config = Config.merge(config, newConfig);
-                persistConfiguration(config);
-                logger.debug("Service configured with: {}", config.toString());
-                mConfig = config;
-
-                Message msg = Message.obtain(null,
-                        LocationService.MSG_CONFIGURE);
-                msg.setData(config.toBundle());
-
-                serviceSend(msg);
+                Config newConfig = Config.merge(getConfig(), config);
+                persistConfiguration(newConfig);
+                logger.debug("Service configured with: {}", newConfig.toString());
+                mService.configure(newConfig);
             } catch (Exception e) {
-                logger.error("Configuration persist error: {}", e.getMessage());
+                logger.error("Configuration error: {}", e.getMessage());
                 throw new PluginException("Configuration error", e, PluginException.CONFIGURE_ERROR);
             }
         }
@@ -324,10 +332,11 @@ public class BackgroundGeolocationFacade {
 
     public Config getConfig() throws PluginException {
         synchronized (mLock) {
-            Config config = mConfig;
             try {
+                ConfigurationDAO dao = DAOFactory.createConfigurationDAO(getContext());
+                Config config = dao.retrieveConfiguration();
                 if (config == null) {
-                    config = getStoredOrDefaultConfig();
+                    config = Config.getDefault();
                 }
                 return config;
             } catch (JSONException e) {
@@ -365,6 +374,10 @@ public class BackgroundGeolocationFacade {
         return hasPermissions() ? AUTHORIZATION_AUTHORIZED : AUTHORIZATION_DENIED;
     }
 
+    public boolean hasPermissions() {
+        return hasPermissions(getContext(), PERMISSIONS);
+    }
+
     public boolean locationServicesEnabled() throws PluginException {
         Context context = getContext();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -382,149 +395,98 @@ public class BackgroundGeolocationFacade {
         }
     }
 
-    public void registerHeadlessTask(String jsFunction) {
-        mHeadlessJsFunction = jsFunction;
-        Message msg = Message.obtain(null, LocationService.MSG_REGISTER_HEADLESS_TASK);
-        Bundle bundle = new Bundle();
-        bundle.putString(HeadlessTaskRunner.BUNDLE_KEY, jsFunction);
-        msg.setData(bundle);
-        msg.replyTo = mMessenger;
-        serviceSend(msg);
-    }
-
-    private Config getStoredOrDefaultConfig() throws JSONException {
-        Config config = getStoredConfig();
-        if (config == null) {
-            config = Config.getDefault();
-        }
-        return config;
-    }
-
-    private Config getStoredConfig() throws JSONException {
-        ConfigurationDAO dao = DAOFactory.createConfigurationDAO(getContext());
-        return dao.retrieveConfiguration();
-    }
-
-    private void startAndBindBackgroundService() {
-        try {
-            startBackgroundService();
-            safeBindService();
-        } catch (JSONException e) {
-            logger.error("Error starting service: {}", e.getMessage());
-            mDelegate.onError(new PluginException(e.getMessage(), PluginException.SERVICE_ERROR));
-        }
-    }
-
-    private void startBackgroundService() throws JSONException {
-        if (LocationService.isRunning()) return;
-
-        logger.info("Starting bg service");
-        Context context = getContext();
-
+    public void registerHeadlessTask(final String jsFunction) {
+        logger.info("Registering headless task");
         synchronized (mLock) {
-            if (mConfig == null) {
-                logger.warn("Attempt to start unconfigured service. Will use stored or default.");
-                mConfig = getStoredOrDefaultConfig();
-            }
+            mService.registerHeadlessTask(jsFunction);
+        }
+    }
 
-            Intent locationServiceIntent = new Intent(context, LocationService.class);
-            locationServiceIntent.putExtra("config", mConfig);
-            locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
-            // start service to keep service running even if no clients are bound to it
-            context.startService(locationServiceIntent);
-            mDelegate.onLocationResume();
+    private void startBackgroundService() {
+        logger.info("Attempt to start bg service");
+        synchronized (mLock) {
+            mService.start();
         }
     }
 
     private void stopBackgroundService() {
-        if (!LocationService.isRunning()) return;
-
-        logger.info("Stopping bg service");
-        Context context = getContext();
-        context.stopService(new Intent(context, LocationService.class));
-        mDelegate.onLocationPause();
+        logger.info("Attempt to stop bg service");
+        synchronized (mLock) {
+            mService.stop();
+        }
     }
 
-    private void safeBindService() {
-        runOnUiThread(new Runnable() {
+    public boolean isRunning() {
+        return LocationService.isStarted();
+    }
+
+    private void bindService() throws TimeoutException {
+        ThreadUtils.runOnUiThreadBlocking(new Runnable() {
             @Override
             public void run() {
-                bindService();
+                unsafeBindService();
+            }
+        });
+        waitOnLatch(((ProxyServiceConnection) mServiceConnection).mConnectedLatch, "connected");
+    }
+
+    private void unbindService() {
+        ThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                unsafeUnbindService();
             }
         });
     }
 
-    private void safeUnbindService() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                unbindService();
-            }
-        });
-    }
-
-    private void bindService() {
+    private synchronized void unsafeBindService() {
         // Establish a connection with the service.  We use an explicit
         // class name because there is no reason to be able to let other
         // applications replace our component.
         if (mIsBound) return;
 
         logger.debug("Binding to service");
-        mMessenger = new Messenger(new IncomingHandler());
 
-        final Context context = getContext();
+        final Context context = getApplicationContext();
         Intent locationServiceIntent = new Intent(context, LocationService.class);
-//        locationServiceIntent.putExtra("config", mConfig);
-        context.bindService(locationServiceIntent, mConnection, Context.BIND_IMPORTANT);
+        mServiceConnection = new ProxyServiceConnection(new LocationServiceConnection());
+        context.bindService(locationServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
-    private void unbindService () {
+    private synchronized void unsafeUnbindService() {
         if (mIsBound == false) return;
 
         logger.debug("Unbinding from service");
         // If we have received the service, and hence registered with
         // it, then now is the time to unregister.
         if (mService != null) {
-            try {
-                Message msg = Message.obtain(null,
-                        LocationService.MSG_UNREGISTER_CLIENT);
-                msg.replyTo = mMessenger;
-                msg.arg1 = MESSENGER_CLIENT_ID;
-                mService.send(msg);
-            } catch (RemoteException e) {
-                // There is nothing special we need to do if the service
-                // has crashed.
-            }
-
             // Detach our existing connection.
-            final Context context = getContext();
+            final Context context = getApplicationContext();
 
             if (context != null) { //workaround for issue RN #9791
                 // not unbinding from service will cause ServiceConnectionLeaked
                 // but there is not much we can do about it now
-                context.unbindService(mConnection);
+                context.unbindService(mServiceConnection);
             }
 
             mIsBound = false;
         }
     }
 
-    private void runOnUiThread(Runnable runnable) {
-        if (mMainhandler == null) {
-            return;
-        }
-        mMainhandler.post(runnable);
-    }
-
-    private void serviceSend(Message message) {
-        if (!mIsBound) {
-            return;
-        }
-
+    /**
+     * Helper method to block on a given latch for the duration of the set timeout
+     */
+    // Visible for testing
+    private void waitOnLatch(CountDownLatch latch, String actionName) throws TimeoutException {
         try {
-            mService.send(message);
-        } catch (RemoteException e) {
-            logger.error("Service send exception: {}", e.getMessage());
+            if (!latch.await(mServiceConnectionTimeout, mServiceConnectionTimeUnit)) {
+                throw new TimeoutException("Waited for " + mServiceConnectionTimeout + " " + mServiceConnectionTimeUnit.name() + "," +
+                        " but service was never " + actionName);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for service to be " +
+                    actionName, e);
         }
     }
 
@@ -535,6 +497,10 @@ public class BackgroundGeolocationFacade {
 
     private Context getContext() {
         return mContext;
+    }
+
+    private Context getApplicationContext() {
+        return mContext.getApplicationContext();
     }
 
     public static void showAppSettings(Context context) {
@@ -554,11 +520,6 @@ public class BackgroundGeolocationFacade {
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
         context.startActivity(intent);
-    }
-
-
-    public boolean hasPermissions() {
-        return hasPermissions(getContext(), PERMISSIONS);
     }
 
     public static boolean hasPermissions(Context context, String[] permissions) {

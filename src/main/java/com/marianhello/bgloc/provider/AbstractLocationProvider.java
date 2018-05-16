@@ -64,7 +64,7 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     }
 
     @Override
-    public void onCommand(int commandId) {
+    public void onCommand(int commandId, int arg1) {
         // override in child class
     }
 
