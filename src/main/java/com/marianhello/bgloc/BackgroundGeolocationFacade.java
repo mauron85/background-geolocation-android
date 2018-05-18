@@ -2,6 +2,7 @@ package com.marianhello.bgloc;
 
 import android.Manifest;
 import android.accounts.Account;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -10,18 +11,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
-import android.telecom.Call;
 import android.text.TextUtils;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
@@ -42,9 +44,7 @@ import org.json.JSONException;
 import org.slf4j.event.Level;
 
 import java.util.Collection;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -116,6 +116,32 @@ public class BackgroundGeolocationFacade {
             mIsBound = false;
         }
     };
+
+    static class CurrentLocationListener implements LocationListener {
+        Location mLocation = null;
+        public final CountDownLatch mCountDownLatch = new CountDownLatch(1);
+
+        @Override
+        public void onLocationChanged(Location location) {
+            mLocation = location;
+            mCountDownLatch.countDown();
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+
+        }
+    }
 
     private BroadcastReceiver locationModeChangeReceiver = new BroadcastReceiver() {
         @Override
@@ -304,6 +330,50 @@ public class BackgroundGeolocationFacade {
         dao.deleteAllLocations();
     }
 
+    @SuppressLint("MissingPermission")
+    public BackgroundLocation getCurrentLocation(int timeout, long maximumAge, boolean enableHighAccuracy) throws PluginException, TimeoutException {
+        logger.info("Getting current location with timeout:{} maximumAge:{} enableHighAccuracy:{}", timeout, maximumAge, enableHighAccuracy);
+
+        if (!hasPermissions()) {
+            logger.warn("Getting current location failed due missing permissions");
+            throw new PluginException("Permission denied", PluginException.PERMISSION_DENIED_ERROR);
+        }
+
+        final LocationManager locationManager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+
+        Location lastKnownGPSLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        if (lastKnownGPSLocation != null && lastKnownGPSLocation.getTime() <= maximumAge) {
+            return new BackgroundLocation(lastKnownGPSLocation);
+        }
+
+        Location lastKnownNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if (lastKnownNetworkLocation != null && lastKnownNetworkLocation.getTime() <= maximumAge) {
+            return new BackgroundLocation(lastKnownNetworkLocation);
+        }
+
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(enableHighAccuracy ? Criteria.ACCURACY_FINE : Criteria.ACCURACY_COARSE);
+
+        CurrentLocationListener locationListener = new CurrentLocationListener();
+        locationManager.requestSingleUpdate(criteria, locationListener, Looper.getMainLooper());
+        try {
+            if (!locationListener.mCountDownLatch.await(timeout, TimeUnit.MILLISECONDS)) {
+                locationManager.removeUpdates(locationListener);
+                throw new TimeoutException();
+            }
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while waiting location", e);
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting location", e);
+        }
+
+        if (locationListener.mLocation != null) {
+            return new BackgroundLocation(locationListener.mLocation);
+        }
+
+        return null;
+    }
+
     public void switchMode(final int mode) {
         synchronized (mLock) {
             mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
@@ -476,7 +546,6 @@ public class BackgroundGeolocationFacade {
     /**
      * Helper method to block on a given latch for the duration of the set timeout
      */
-    // Visible for testing
     private void waitOnLatch(CountDownLatch latch, String actionName) throws TimeoutException {
         try {
             if (!latch.await(mServiceConnectionTimeout, mServiceConnectionTimeUnit)) {
@@ -484,9 +553,9 @@ public class BackgroundGeolocationFacade {
                         " but service was never " + actionName);
             }
         } catch (InterruptedException e) {
+            logger.error("Interrupted while waiting for service to be " + actionName, e);
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for service to be " +
-                    actionName, e);
+            throw new RuntimeException("Interrupted while waiting for service to be " + actionName, e);
         }
     }
 
