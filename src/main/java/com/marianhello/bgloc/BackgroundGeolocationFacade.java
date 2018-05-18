@@ -233,25 +233,25 @@ public class BackgroundGeolocationFacade {
     }
 
     public void resume() {
-        registerServiceBroadcast();
-        if (LocationService.isStarted()) {
-            registerLocationModeChangeReceiver();
-        }
-
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    bindService();
-                } catch (TimeoutException e) {
-                    logger.warn("Connection to service timed out", e);
-                } finally {
-                    switchMode(BackgroundGeolocationFacade.FOREGROUND_MODE);
-                }
-            }
-        };
-
         synchronized (mLock) {
+            registerServiceBroadcast();
+            if (LocationService.isStarted()) {
+                registerLocationModeChangeReceiver();
+            }
+
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        bindService();
+                    } catch (TimeoutException e) {
+                        logger.warn("Connection to service timed out", e);
+                    } finally {
+                        switchMode(BackgroundGeolocationFacade.FOREGROUND_MODE);
+                    }
+                }
+            };
+
             if (ThreadUtils.runningOnUiThread()) {
                 new Thread(r).start();
             } else {
