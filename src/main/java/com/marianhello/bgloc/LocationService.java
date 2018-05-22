@@ -323,25 +323,27 @@ public class LocationService extends Service implements ProviderDelegate {
         ThreadUtils.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
-                    stopForeground(true);
-                }
+                if (isStarted()) {
+                    if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
+                        stopForeground(true);
+                    }
 
-                if (mConfig.getStartForeground() == true) {
-                    if (currentConfig.getStartForeground() == false) {
-                        // was not running in foreground, so start in foreground
-                        startForeground();
-                    } else {
-                        // was running in foreground, so just update existing notification
-                        Notification notification = new NotificationHelper.NotificationFactory(LocationService.this).getNotification(
-                                mConfig.getNotificationTitle(),
-                                mConfig.getNotificationText(),
-                                mConfig.getLargeNotificationIcon(),
-                                mConfig.getSmallNotificationIcon(),
-                                mConfig.getNotificationIconColor());
+                    if (mConfig.getStartForeground() == true) {
+                        if (currentConfig.getStartForeground() == false) {
+                            // was not running in foreground, so start in foreground
+                            startForeground();
+                        } else {
+                            // was running in foreground, so just update existing notification
+                            Notification notification = new NotificationHelper.NotificationFactory(LocationService.this).getNotification(
+                                    mConfig.getNotificationTitle(),
+                                    mConfig.getNotificationText(),
+                                    mConfig.getLargeNotificationIcon(),
+                                    mConfig.getSmallNotificationIcon(),
+                                    mConfig.getNotificationIconColor());
 
-                        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                        notificationManager.notify(NOTIFICATION_ID, notification);
+                            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                            notificationManager.notify(NOTIFICATION_ID, notification);
+                        }
                     }
                 }
 
