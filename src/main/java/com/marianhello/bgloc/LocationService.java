@@ -10,7 +10,9 @@ This is a new class
 package com.marianhello.bgloc;
 
 import android.accounts.Account;
+import android.app.ActivityManager;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -131,7 +133,10 @@ public class LocationService extends Service implements ProviderDelegate {
     public IBinder onBind(Intent intent) {
         logger.debug("Client binds to service");
 
-        stopForeground(true);
+        if (!getConfig().getStartForeground()) {
+            stopForeground(true);
+        }
+
         mIsBound = true;
         return mBinder;
     }
@@ -140,7 +145,10 @@ public class LocationService extends Service implements ProviderDelegate {
     public void onRebind(Intent intent) {
         logger.debug("Client rebinds to service");
 
-        stopForeground(true);
+        if (!getConfig().getStartForeground()) {
+            stopForeground(true);
+        }
+
         mIsBound = true;
         super.onRebind(intent);
     }
@@ -150,16 +158,10 @@ public class LocationService extends Service implements ProviderDelegate {
         // All clients have unbound with unbindService()
         logger.debug("All clients have been unbound from service");
 
-        Config config = getConfig();
-        if (isStarted()) {
-            Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
-                    config.getNotificationTitle(),
-                    config.getNotificationText(),
-                    config.getLargeNotificationIcon(),
-                    config.getSmallNotificationIcon(),
-                    config.getNotificationIconColor());
-            startForeground(NOTIFICATION_ID, notification);
+        if (isStarted() && !isInForeground(this)) {
+            startForeground();
         }
+
         mIsBound = false;
         return true; // Ensures onRebind() is called when a client re-binds.
     }
@@ -250,6 +252,10 @@ public class LocationService extends Service implements ProviderDelegate {
         mProvider.onConfigure(mConfig);
         mProvider.onStart();
 
+        if (mConfig.getStartForeground()) {
+            startForeground();
+        }
+
         Bundle bundle = new Bundle();
         bundle.putInt("action", MSG_ON_SERVICE_STARTED);
         broadcastMessage(bundle);
@@ -258,6 +264,17 @@ public class LocationService extends Service implements ProviderDelegate {
 
         // We want this service to continue running until it is explicitly stopped
         return START_STICKY;
+    }
+
+    private void startForeground() {
+        Config config = getConfig();
+        Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
+                config.getNotificationTitle(),
+                config.getNotificationText(),
+                config.getLargeNotificationIcon(),
+                config.getSmallNotificationIcon(),
+                config.getNotificationIconColor());
+        super.startForeground(NOTIFICATION_ID, notification);
     }
 
     public synchronized void start() {
@@ -282,6 +299,9 @@ public class LocationService extends Service implements ProviderDelegate {
             mProvider.onStop();
         }
 
+        if (getConfig().getStartForeground()) {
+            stopForeground(true);
+        }
         stopSelf();
 
         Bundle bundle = new Bundle();
@@ -303,6 +323,28 @@ public class LocationService extends Service implements ProviderDelegate {
         ThreadUtils.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
+                    stopForeground(true);
+                }
+
+                if (mConfig.getStartForeground() == true) {
+                    if (currentConfig.getStartForeground() == false) {
+                        // was not running in foreground, so start in foreground
+                        startForeground();
+                    } else {
+                        // was running in foreground, so just update existing notification
+                        Notification notification = new NotificationHelper.NotificationFactory(LocationService.this).getNotification(
+                                mConfig.getNotificationTitle(),
+                                mConfig.getNotificationText(),
+                                mConfig.getLargeNotificationIcon(),
+                                mConfig.getSmallNotificationIcon(),
+                                mConfig.getNotificationIconColor());
+
+                        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                        notificationManager.notify(NOTIFICATION_ID, notification);
+                    }
+                }
+
                 if (currentConfig.getLocationProvider() != mConfig.getLocationProvider()) {
                     boolean shouldStart = mProvider.isStarted();
                     mProvider.onDestroy();
@@ -578,6 +620,17 @@ public class LocationService extends Service implements ProviderDelegate {
                 (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+    }
+
+    public static boolean isInForeground(Context context) {
+        String serviceName = LocationService.class.getName();
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceName.equals(service.service.getClassName())) {
+                return service.foreground;
+            }
+        }
+        return false;
     }
 
     public static boolean isStarted() {

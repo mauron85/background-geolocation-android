@@ -270,10 +270,9 @@ public class BackgroundGeolocationFacade {
                 public void run() {
                     try {
                         bindService();
+                        switchMode(BackgroundGeolocationFacade.FOREGROUND_MODE);
                     } catch (TimeoutException e) {
                         logger.warn("Connection to service timed out", e);
-                    } finally {
-                        switchMode(BackgroundGeolocationFacade.FOREGROUND_MODE);
                     }
                 }
             };
