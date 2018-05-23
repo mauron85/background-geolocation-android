@@ -27,6 +27,8 @@ android {
     compileSdkVersion 26
     buildToolsVersion "26.0.1"
     publishNonDefault true
+    
+    flavorDimensions "default"
 
     defaultConfig {
         resValue "string", "content_authority", applicationId + '.provider'
