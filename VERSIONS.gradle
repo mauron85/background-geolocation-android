@@ -31,3 +31,27 @@ ext.getSupportLibVersion = { ->
     }
     return supportLibVersion
 }
+
+ext.getCompileSdkVersion = { ->
+    def compileSdkVersion = DEFAULT_COMPILE_SDK_VERSION
+    if (rootProject.hasProperty('compileSdkVersion')) {
+        compileSdkVersion = rootProject.compileSdkVersion
+    }
+    return compileSdkVersion
+}
+
+ext.getBuildToolsVersion = { ->
+    def buildToolsVersion = DEFAULT_BUILD_TOOLS_VERSION
+    if (rootProject.hasProperty('buildToolsVersion')) {
+        buildToolsVersion = rootProject.buildToolsVersion
+    }
+    return buildToolsVersion
+}
+
+ext.getTargetSdkVersion = { ->
+    def targetSdkVersion = DEFAULT_TARGET_SDK_VERSION
+    if (rootProject.hasProperty('targetSdkVersion')) {
+        targetSdkVersion = rootProject.targetSdkVersion
+    }
+    return targetSdkVersion
+}
