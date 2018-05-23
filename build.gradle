@@ -72,6 +72,11 @@ dependencies {
     testCompile 'org.json:json:20140107'
     compile 'com.google.android.gms:play-services-location:11+'
     oreoCompile 'com.android.support:support-compat:26+'
+    compile 'com.android.support:appcompat-v7:26+' // override android-permissions
+    compile('com.intentfilter:android-permissions:0.1.6') {
+        exclude group: 'com.android.support', module: 'appcompat-v7'
+    }
+    compile 'com.github.jparkie:promise:1.0.3'
 }
 
 apply from: './logtofile.gradle'
