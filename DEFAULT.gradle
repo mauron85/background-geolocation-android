@@ -1,0 +1,33 @@
+def DEFAULT_COMPILE_SDK_VERSION = 23
+def DEFAULT_BUILD_TOOLS_VERSION = "23.0.1"
+def DEFAULT_TARGET_SDK_VERSION = 23
+def DEFAULT_PLAY_SERVICES_VERSION = "11+"
+def DEFAULT_SUPPORT_LIB_VERSION = "23.0.1"
+
+ext.getApplicationId = { ->
+    def applicationId = "com.marianhello.app"
+    if (findProject(':app') != null) {
+        applicationId = project(':app').android.defaultConfig.applicationId
+    }
+    return applicationId
+}
+
+ext.getPlayServicesVersion = { ->
+    // Check for application-defined play-services version
+    def playServicesVersion = DEFAULT_PLAY_SERVICES_VERSION
+    if (rootProject.hasProperty('playServicesVersion')) {
+        playServicesVersion = rootProject.playServicesVersion
+    } else if (rootProject.hasProperty('googlePlayServicesVersion')) {
+        playServicesVersion = rootProject.googlePlayServicesVersion
+    }
+
+    return playServicesVersion
+}
+
+ext.getSupportLibVersion = { ->
+    def supportLibVersion = DEFAULT_SUPPORT_LIB_VERSION
+    if (rootProject.hasProperty('supportLibVersion')) {
+        supportLibVersion = rootProject.supportLibVersion
+    }
+    return supportLibVersion
+}

@@ -1,4 +1,0 @@
-dependencies {
-    compile 'com.github.tony19:logback-android:1.1.1-9'
-    compile 'org.slf4j:slf4j-api:1.7.21'
-}

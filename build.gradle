@@ -1,6 +1,9 @@
 apply plugin: 'com.android.library'
 
-def applicationId = "com.marianhello"
+apply from: './DEFAULT.gradle'
+def applicationId = getApplicationId()
+def playServicesVersion = getPlayServicesVersion()
+def supportLibVersion = getSupportLibVersion()
 
 buildscript {
     repositories {
@@ -70,13 +73,13 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     testCompile 'org.json:json:20140107'
-    compile 'com.google.android.gms:play-services-location:11+'
+    compile "com.google.android.gms:play-services-location:$playServicesVersion"
     oreoCompile 'com.android.support:support-compat:26+'
-    compile 'com.android.support:appcompat-v7:26+' // override android-permissions
+    compile "com.android.support:appcompat-v7:$supportLibVersion" // override android-permissions
     compile('com.intentfilter:android-permissions:0.1.6') {
         exclude group: 'com.android.support', module: 'appcompat-v7'
     }
+    compile 'com.github.tony19:logback-android:1.1.1-9'
+    compile 'org.slf4j:slf4j-api:1.7.21'
     compile 'com.github.jparkie:promise:1.0.3'
 }
-
-apply from: './logtofile.gradle'
