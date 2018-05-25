@@ -55,3 +55,10 @@ ext.getTargetSdkVersion = { ->
     }
     return targetSdkVersion
 }
+
+ext.getGradle3Support = { ->
+    if (rootProject.hasProperty('gradle3EXPERIMENTAL')) {
+        return true;
+    }
+    return false;
+}
