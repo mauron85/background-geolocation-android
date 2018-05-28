@@ -78,15 +78,16 @@ public class LocationManager {
      */
     @SuppressLint("MissingPermission")
     public Location getCurrentLocationNoCheck(int timeout, long maximumAge, boolean enableHighAccuracy) throws InterruptedException, TimeoutException {
+        final long minLocationTime = System.currentTimeMillis() - maximumAge;
         final android.location.LocationManager locationManager = (android.location.LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
         Location lastKnownGPSLocation = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER);
-        if (lastKnownGPSLocation != null && lastKnownGPSLocation.getTime() <= maximumAge) {
+        if (lastKnownGPSLocation != null && lastKnownGPSLocation.getTime() >= minLocationTime) {
             return lastKnownGPSLocation;
         }
 
         Location lastKnownNetworkLocation = locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER);
-        if (lastKnownNetworkLocation != null && lastKnownNetworkLocation.getTime() <= maximumAge) {
+        if (lastKnownNetworkLocation != null && lastKnownNetworkLocation.getTime() >= minLocationTime) {
             return lastKnownNetworkLocation;
         }
 
