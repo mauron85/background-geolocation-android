@@ -70,6 +70,10 @@ public class BackgroundGeolocationFacade {
     private final Object mLock = new Object();
     private final PluginDelegate mDelegate;
 
+    private boolean mShouldStartService = false;
+    private boolean mShouldStopService = false;
+    private Config mNextConfiguration = null;
+
     private BackgroundLocation mStationaryLocation;
 
     private org.slf4j.Logger logger;
@@ -102,6 +106,21 @@ public class BackgroundGeolocationFacade {
             LocationService.LocalBinder binder = (LocationService.LocalBinder) service;
             mService = binder.getService();
             mIsBound = true;
+
+            if (mNextConfiguration != null)
+            {
+                mService.configure(mNextConfiguration);
+                mNextConfiguration = null;
+            }
+
+            if (mShouldStartService)
+            {
+                start();
+            }
+            else if (mShouldStopService)
+            {
+                stop();
+            }
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -209,7 +228,17 @@ public class BackgroundGeolocationFacade {
     }
 
     public void start() {
+        if (mService == null)
+        {
+            logger.debug("Should start service, but mService is not bound yet.");
+            mShouldStartService = true;
+            mShouldStopService = false;
+            return;
+        }
+
         logger.debug("Starting service");
+        mShouldStartService = false;
+        mShouldStopService = false;
 
         PermissionManager permissionManager = PermissionManager.getInstance(getContext());
         permissionManager.checkPermissions(Arrays.asList(PERMISSIONS), new PermissionManager.PermissionRequestListener() {
@@ -233,7 +262,18 @@ public class BackgroundGeolocationFacade {
     }
 
     public void stop() {
+        if (mService == null)
+        {
+            logger.debug("Should stop service, but mService is not bound yet.");
+            mShouldStartService = false;
+            mShouldStopService = true;
+            return;
+        }
+
         logger.debug("Stopping service");
+        mShouldStartService = false;
+        mShouldStopService = false;
+        
         stopBackgroundService();
         unregisterLocationModeChangeReceiver();
 //        unregisterServiceBroadcast();
@@ -361,11 +401,21 @@ public class BackgroundGeolocationFacade {
 
     public void configure(Config config) throws PluginException {
         synchronized (mLock) {
-            try {
+            try
+            {
                 Config newConfig = Config.merge(getConfig(), config);
                 persistConfiguration(newConfig);
                 logger.debug("Service configured with: {}", newConfig.toString());
-                mService.configure(newConfig);
+
+                if (mService != null)
+                {
+                    mService.configure(newConfig);
+                }
+                else
+                {
+                    mNextConfiguration = newConfig;
+                }
+
             } catch (Exception e) {
                 logger.error("Configuration error: {}", e.getMessage());
                 throw new PluginException("Configuration error", e, PluginException.CONFIGURE_ERROR);
