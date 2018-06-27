@@ -71,6 +71,7 @@ public class BackgroundGeolocationFacade {
     private final PluginDelegate mDelegate;
 
     private boolean mShouldStartService = false;
+    private boolean mShouldStopService = false;
     private Config mNextConfiguration = null;
 
     private BackgroundLocation mStationaryLocation;
@@ -115,6 +116,10 @@ public class BackgroundGeolocationFacade {
             if (mShouldStartService)
             {
                 start();
+            }
+            else if (mShouldStopService)
+            {
+                stop();
             }
         }
 
@@ -227,11 +232,13 @@ public class BackgroundGeolocationFacade {
         {
             logger.debug("Should start service, but mService is not bound yet.");
             mShouldStartService = true;
+            mShouldStopService = false;
             return;
         }
 
         logger.debug("Starting service");
         mShouldStartService = false;
+        mShouldStopService = false;
 
         PermissionManager permissionManager = PermissionManager.getInstance(getContext());
         permissionManager.checkPermissions(Arrays.asList(PERMISSIONS), new PermissionManager.PermissionRequestListener() {
@@ -255,8 +262,18 @@ public class BackgroundGeolocationFacade {
     }
 
     public void stop() {
+        if (mService == null)
+        {
+            logger.debug("Should stop service, but mService is not bound yet.");
+            mShouldStartService = false;
+            mShouldStopService = true;
+            return;
+        }
+
         logger.debug("Stopping service");
         mShouldStartService = false;
+        mShouldStopService = false;
+        
         stopBackgroundService();
         unregisterLocationModeChangeReceiver();
 //        unregisterServiceBroadcast();
