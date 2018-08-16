@@ -30,6 +30,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.data.BackgroundActivity;
@@ -113,6 +115,7 @@ public class LocationService extends Service implements ProviderDelegate {
     private ServiceHandler mServiceHandler;
     private HeadlessTaskRunner mHeadlessTaskRunner;
     private PostLocationTask mPostLocationTask;
+    private static ILocationTransform mLocationTransform;
 
     private class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
@@ -545,12 +548,24 @@ public class LocationService extends Service implements ProviderDelegate {
             mExecutor.shutdown();
         }
 
-        public void add(final BackgroundLocation location) {
+        public void add(final BackgroundLocation inLocation) {
             mExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
                     long locationId;
                     Config config = getConfig();
+
+                    BackgroundLocation location = inLocation;
+
+                    if (mLocationTransform != null) {
+                        location = mLocationTransform.transformLocationBeforeCommit(LocationService.this, location);
+
+                        if (location == null) {
+                            logger.debug("Skipping coordinate as requested by the locationTransform");
+                            return;
+                        }
+                    }
+
                     if (mHasConnectivity && config.hasValidUrl()) {
                         locationId = mLocationDAO.persistLocation(location, config.getMaxLocations());
                         if (postLocation(location)) {
@@ -637,5 +652,26 @@ public class LocationService extends Service implements ProviderDelegate {
 
     public static boolean isStarted() {
         return sServiceStatus == SERVICE_STARTED;
+    }
+
+    public static void setLocationTransform(@Nullable ILocationTransform transform) {
+        mLocationTransform = transform;
+    }
+
+    public static @Nullable ILocationTransform getLocationTransform() {
+        return mLocationTransform;
+    }
+
+    public interface ILocationTransform
+    {
+        /**
+         * Return a <code>BackgroundLocation</code>, either a new one or the same one after modification.
+         * Return <code>null</code> to prevent this location from being committed.
+         * @param context
+         * @param location - the input location
+         * @return the location that you want to actually commit
+         */
+
+        @Nullable BackgroundLocation transformLocationBeforeCommit(@NonNull Context context, @NonNull BackgroundLocation location);
     }
 }
