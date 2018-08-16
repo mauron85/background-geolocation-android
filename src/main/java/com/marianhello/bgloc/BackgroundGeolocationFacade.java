@@ -572,4 +572,19 @@ public class BackgroundGeolocationFacade {
         }
         return true;
     }
+
+    /**
+     * Sets a transform for each coordinate about to be committed (sent or saved for later sync).
+     * You can use this for modifying the coordinates in any way.
+     *
+     * If the transform returns <code>null</code>, it will prevent the location from being committed.
+     * @param transform - the transform listener
+     */
+    public static void setLocationTransform(LocationService.ILocationTransform transform) {
+        LocationService.setLocationTransform(transform);
+    }
+
+    public static LocationService.ILocationTransform getLocationTransform() {
+        return LocationService.getLocationTransform();
+    }
 }
