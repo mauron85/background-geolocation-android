@@ -2,6 +2,7 @@ package com.marianhello.bgloc;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -86,7 +87,8 @@ public class NotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String appName = ResourceResolver.newInstance(context).getString(("app_name"));
             android.app.NotificationManager notificationManager = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel serviceChannel = new NotificationChannel(SERVICE_CHANNEL_ID, appName, android.app.NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel serviceChannel = new NotificationChannel(SERVICE_CHANNEL_ID, appName, android.app.NotificationManager.IMPORTANCE_LOW);
+            serviceChannel.enableVibration(false);
             // Register the channel with the system
             notificationManager.createNotificationChannel(serviceChannel);
         }
@@ -97,8 +99,9 @@ public class NotificationHelper {
             android.app.NotificationManager notificationManager = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             // Create the NotificationChannel, but only on API 26+ because
             // the NotificationChannel class is new and not in the support library
-            NotificationChannel syncChannel = new NotificationChannel(SYNC_CHANNEL_ID, SYNC_CHANNEL_NAME, android.app.NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel syncChannel = new NotificationChannel(SYNC_CHANNEL_ID, SYNC_CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
             syncChannel.setDescription(SYNC_CHANNEL_DESCRIPTION);
+            syncChannel.enableVibration(false);
             // Register the channel with the system
             notificationManager.createNotificationChannel(syncChannel);
         }
