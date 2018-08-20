@@ -39,6 +39,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
     private ConfigurationDAO configDAO;
     private NotificationManager notificationManager;
     private BatchManager batchManager;
+    private boolean notificationsEnabled = true;
 
     private org.slf4j.Logger logger;
 
@@ -99,6 +100,9 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
             return;
         }
 
+        //noinspection ConstantConditions
+        notificationsEnabled = !config.hasNotificationsEnabled() || config.getNotificationsEnabled();
+
         Long batchStartMillis = System.currentTimeMillis();
         boolean isForced = extras.getBoolean(ContentResolver.SYNC_EXTRAS_MANUAL);
         int syncThreshold = isForced ? 0 : config.getSyncThreshold();
@@ -137,41 +141,52 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
     }
 
     private boolean uploadLocations(File file, String url, HashMap httpHeaders) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
-        builder.setOngoing(true);
-        builder.setContentTitle("Syncing locations");
-        builder.setContentText("Sync in progress");
-        builder.setSmallIcon(android.R.drawable.ic_dialog_info);
-        notificationManager.notify(NOTIFICATION_ID, builder.build());
+        NotificationCompat.Builder builder = null;
+
+        if (notificationsEnabled) {
+            builder = new NotificationCompat.Builder(getContext());
+            builder.setOngoing(true);
+            builder.setContentTitle("Syncing locations");
+            builder.setContentText("Sync in progress");
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info);
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+        }
 
         try {
             int responseCode = HttpPostService.postFile(url, file, httpHeaders, this);
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
-                builder.setContentText("Sync completed");
-            } else {
-                builder.setContentText("Sync failed due server error");
+
+            if (builder != null) {
+                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
+                    builder.setContentText("Sync completed");
+                } else {
+                    builder.setContentText("Sync failed due server error");
+                }
             }
 
             return responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED;
         } catch (IOException e) {
             logger.warn("Error uploading locations: {}", e.getMessage());
-            builder.setContentText("Sync failed: " + e.getMessage());
+
+            if (builder != null)
+                builder.setContentText("Sync failed: " + e.getMessage());
         } finally {
             logger.info("Syncing endAt: {}", System.currentTimeMillis());
 
-            builder.setOngoing(false);
-            builder.setProgress(0, 0, false);
-            builder.setAutoCancel(true);
-            notificationManager.notify(NOTIFICATION_ID, builder.build());
+            if (builder != null) {
+                builder.setOngoing(false);
+                builder.setProgress(0, 0, false);
+                builder.setAutoCancel(true);
+                notificationManager.notify(NOTIFICATION_ID, builder.build());
 
-            Handler h = new Handler(Looper.getMainLooper());
-            long delayInMilliseconds = 5000;
-            h.postDelayed(new Runnable() {
-                public void run() {
-                    logger.info("Notification cancelledAt: {}", System.currentTimeMillis());
-                    notificationManager.cancel(NOTIFICATION_ID);
-                }
-            }, delayInMilliseconds);
+                Handler h = new Handler(Looper.getMainLooper());
+                long delayInMilliseconds = 5000;
+                h.postDelayed(new Runnable() {
+                    public void run() {
+                        logger.info("Notification cancelledAt: {}", System.currentTimeMillis());
+                        notificationManager.cancel(NOTIFICATION_ID);
+                    }
+                }, delayInMilliseconds);
+            }
         }
 
         return false;
@@ -179,12 +194,15 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
 
     public void uploadListener(int progress) {
         logger.debug("Syncing progress: {} updatedAt: {}", progress, System.currentTimeMillis());
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
-        builder.setOngoing(true);
-        builder.setContentTitle("Syncing locations");
-        builder.setContentText("Sync in progress");
-        builder.setSmallIcon(android.R.drawable.ic_dialog_info);
-        builder.setProgress(100, progress, false);
-        notificationManager.notify(NOTIFICATION_ID, builder.build());
+
+        if (notificationsEnabled) {
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
+            builder.setOngoing(true);
+            builder.setContentTitle("Syncing locations");
+            builder.setContentText("Sync in progress");
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info);
+            builder.setProgress(100, progress, false);
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+        }
     }
 }
