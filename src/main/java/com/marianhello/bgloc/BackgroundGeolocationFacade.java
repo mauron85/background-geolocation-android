@@ -154,6 +154,7 @@ public class BackgroundGeolocationFacade {
                     mDelegate.onLocationChanged(location);
                     return;
                 }
+
                 case LocationService.MSG_ON_STATIONARY: {
                     logger.debug("Received MSG_ON_STATIONARY");
                     bundle.setClassLoader(LocationService.class.getClassLoader());
@@ -162,6 +163,7 @@ public class BackgroundGeolocationFacade {
                     mDelegate.onStationaryChanged(location);
                     return;
                 }
+
                 case LocationService.MSG_ON_ACTIVITY: {
                     logger.debug("Received MSG_ON_ACTIVITY");
                     bundle.setClassLoader(LocationService.class.getClassLoader());
@@ -169,6 +171,7 @@ public class BackgroundGeolocationFacade {
                     mDelegate.onActitivyChanged(activity);
                     return;
                 }
+
                 case LocationService.MSG_ON_ERROR: {
                     logger.debug("Received MSG_ON_ERROR");
                     Bundle errorBundle = bundle.getBundle("payload");
@@ -177,14 +180,32 @@ public class BackgroundGeolocationFacade {
                     mDelegate.onError(new PluginException(errorMessage, errorCode));
                     return;
                 }
+
                 case LocationService.MSG_ON_SERVICE_STARTED: {
                     logger.debug("Received MSG_ON_SERVICE_STARTED");
                     mDelegate.onServiceStatusChanged(LocationService.SERVICE_STARTED);
                     return;
                 }
+
                 case LocationService.MSG_ON_SERVICE_STOPPED: {
                     logger.debug("Received MSG_ON_SERVICE_STOPPED");
                     mDelegate.onServiceStatusChanged(LocationService.SERVICE_STOPPED);
+                    return;
+                }
+
+                case LocationService.MSG_ON_ABORT_REQUESTED: {
+                    logger.debug("Received MSG_ON_ABORT_REQUESTED");
+
+                    if (mDelegate != null) {
+                        // We have a delegate, tell it that there's a request.
+                        // It will decide whether to stop or not.
+                        mDelegate.onAbortRequested();
+                    } else {
+                        // No delegate, we may be running in the background.
+                        // Let's just stop.
+                        stop();
+                    }
+
                     return;
                 }
             }

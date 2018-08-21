@@ -13,5 +13,6 @@ public interface PluginDelegate {
     void onStationaryChanged(BackgroundLocation location);
     void onActitivyChanged(BackgroundActivity activity);
     void onServiceStatusChanged(int status);
+    void onAbortRequested();
     void onError(PluginException error);
 }

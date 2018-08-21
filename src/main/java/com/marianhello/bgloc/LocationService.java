@@ -92,6 +92,8 @@ public class LocationService extends Service implements ProviderDelegate {
 
     public static final int MSG_ON_SERVICE_STARTED = 105;
 
+    public static final int MSG_ON_ABORT_REQUESTED = 106;
+
     public static final int SERVICE_STOPPED = 0;
     public static final int SERVICE_STARTED = 1;
 
@@ -189,7 +191,12 @@ public class LocationService extends Service implements ProviderDelegate {
 
         mResolver = ResourceResolver.newInstance(this);
         mLocationDAO = (DAOFactory.createLocationDAO(this));
-        mPostLocationTask = new PostLocationTask(mLocationDAO);
+        mPostLocationTask = new PostLocationTask(mLocationDAO, new PostLocationTaskListener() {
+            @Override
+            public void onRequestedAbortUpdates() {
+                handleRequestedAbortUpdates();
+            }
+        });
         mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME,
                 mResolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
 
@@ -538,10 +545,12 @@ public class LocationService extends Service implements ProviderDelegate {
     private class PostLocationTask {
         private final ExecutorService mExecutor;
         private final LocationDAO mLocationDAO;
+        private final PostLocationTaskListener mListener;
 
-        public PostLocationTask(LocationDAO dao) {
+        public PostLocationTask(LocationDAO dao, PostLocationTaskListener listener) {
             mLocationDAO = dao;
             mExecutor = Executors.newSingleThreadExecutor();
+            mListener = listener;
         }
 
         public void shutdown() {
@@ -612,13 +621,29 @@ public class LocationService extends Service implements ProviderDelegate {
                 return false;
             }
 
-            if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_CREATED) {
+            if (responseCode == 285) {
+                // Okay, but we don't need to continue sending these
+
+                logger.debug("Location was sent to the server, and received an \"HTTP 285 Updates Not Required\"");
+
+                if (mListener != null)
+                    mListener.onRequestedAbortUpdates();
+            }
+
+            // All 2xx statuses are okay
+            if (responseCode >= 200 && responseCode < 300) {
                 logger.warn("Server error while posting locations responseCode: {}", responseCode);
                 return false;
             }
 
             return true;
         }
+    }
+
+    public void handleRequestedAbortUpdates() {
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_ABORT_REQUESTED);
+        broadcastMessage(bundle);
     }
 
     /**
@@ -673,5 +698,10 @@ public class LocationService extends Service implements ProviderDelegate {
          */
 
         @Nullable BackgroundLocation transformLocationBeforeCommit(@NonNull Context context, @NonNull BackgroundLocation location);
+    }
+
+    public interface PostLocationTaskListener
+    {
+        void onRequestedAbortUpdates();
     }
 }
