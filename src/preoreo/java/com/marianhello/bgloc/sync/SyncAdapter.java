@@ -6,14 +6,17 @@ import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SyncResult;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.HttpPostService;
+import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.NotificationHelper;
 import com.marianhello.bgloc.UploadingCallback;
 import com.marianhello.bgloc.data.ConfigurationDAO;
@@ -155,15 +158,28 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         try {
             int responseCode = HttpPostService.postFile(url, file, httpHeaders, this);
 
+            // All 2xx statuses are okay
+            boolean isStatusOkay = responseCode >= 200 && responseCode < 300;
+
+            if (responseCode == 285) {
+                // Okay, but we don't need to continue sending these
+
+                logger.debug("Location was sent to the server, and received an \"HTTP 285 Updates Not Required\"");
+
+                Bundle bundle = new Bundle();
+                bundle.putInt("action", LocationService.MSG_ON_ABORT_REQUESTED);
+                broadcastMessage(bundle);
+            }
+
             if (builder != null) {
-                if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
+                if (isStatusOkay) {
                     builder.setContentText("Sync completed");
                 } else {
                     builder.setContentText("Sync failed due server error");
                 }
             }
 
-            return responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED;
+            return isStatusOkay;
         } catch (IOException e) {
             logger.warn("Error uploading locations: {}", e.getMessage());
 
@@ -204,5 +220,11 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
             builder.setProgress(100, progress, false);
             notificationManager.notify(NOTIFICATION_ID, builder.build());
         }
+    }
+
+    private void broadcastMessage(Bundle bundle) {
+        Intent intent = new Intent(LocationService.ACTION_BROADCAST);
+        intent.putExtras(bundle);
+        LocalBroadcastManager.getInstance(getContext().getApplicationContext()).sendBroadcast(intent);
     }
 }
