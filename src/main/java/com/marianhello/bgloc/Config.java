@@ -12,6 +12,7 @@ package com.marianhello.bgloc;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.annotation.Nullable;
 
 import com.marianhello.bgloc.data.AbstractLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
@@ -54,6 +55,7 @@ public class Config implements Parcelable
     private Boolean stopOnTerminate;
     private Boolean startOnBoot;
     private Boolean startForeground;
+    private Boolean notificationsEnabled;
     private Boolean stopOnStillActivity;
     private String url;
     private String syncUrl;
@@ -83,6 +85,7 @@ public class Config implements Parcelable
         this.stopOnTerminate = config.stopOnTerminate;
         this.startOnBoot = config.startOnBoot;
         this.startForeground = config.startForeground;
+        this.notificationsEnabled = config.notificationsEnabled;
         this.stopOnStillActivity = config.stopOnStillActivity;
         this.url = config.url;
         this.syncUrl = config.syncUrl;
@@ -107,6 +110,7 @@ public class Config implements Parcelable
         setStopOnTerminate((Boolean) in.readValue(null));
         setStartOnBoot((Boolean) in.readValue(null));
         setStartForeground((Boolean) in.readValue(null));
+        setNotificationsEnabled((Boolean) in.readValue(null));
         setLocationProvider(in.readInt());
         setInterval(in.readInt());
         setFastestInterval(in.readInt());
@@ -139,6 +143,7 @@ public class Config implements Parcelable
         config.stopOnTerminate = true;
         config.startOnBoot = false;
         config.startForeground = true;
+        config.notificationsEnabled = true;
         config.stopOnStillActivity = true;
         config.url = "";
         config.syncUrl = "";
@@ -168,6 +173,7 @@ public class Config implements Parcelable
         out.writeValue(getStopOnTerminate());
         out.writeValue(getStartOnBoot());
         out.writeValue(getStartForeground());
+        out.writeValue(getNotificationsEnabled());
         out.writeInt(getLocationProvider());
         out.writeInt(getInterval());
         out.writeInt(getFastestInterval());
@@ -340,6 +346,19 @@ public class Config implements Parcelable
 
     public void setStartForeground(Boolean startForeground) {
         this.startForeground = startForeground;
+    }
+
+    public boolean hasNotificationsEnabled() {
+        return notificationsEnabled != null;
+    }
+
+    @Nullable
+    public Boolean getNotificationsEnabled() {
+        return notificationsEnabled;
+    }
+
+    public void setNotificationsEnabled(@Nullable Boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
     }
 
     public boolean hasLocationProvider() {
@@ -515,6 +534,7 @@ public class Config implements Parcelable
                 .append(" stopOnStillActivity=").append(getStopOnStillActivity())
                 .append(" startOnBoot=").append(getStartOnBoot())
                 .append(" startForeground=").append(getStartForeground())
+                .append(" notificationsEnabled=").append(getNotificationsEnabled())
                 .append(" locationProvider=").append(getLocationProvider())
                 .append(" nTitle=").append(getNotificationTitle())
                 .append(" nText=").append(getNotificationText())
@@ -594,6 +614,9 @@ public class Config implements Parcelable
         }
         if (config2.hasStartForeground()) {
             merger.setStartForeground(config2.getStartForeground());
+        }
+        if (config2.hasNotificationsEnabled()) {
+            merger.setNotificationsEnabled(config2.getNotificationsEnabled());
         }
         if (config2.hasStopOnStillActivity()) {
             merger.setStopOnStillActivity(config2.getStopOnStillActivity());

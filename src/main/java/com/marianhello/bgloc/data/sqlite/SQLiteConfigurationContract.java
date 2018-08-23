@@ -23,6 +23,7 @@ public final class SQLiteConfigurationContract {
         public static final String COLUMN_NAME_STOP_TERMINATE = "stop_terminate";
         public static final String COLUMN_NAME_START_BOOT = "start_boot";
         public static final String COLUMN_NAME_START_FOREGROUND = "start_foreground";
+        public static final String COLUMN_NAME_NOTIFICATIONS_ENABLED = "notifications_enabled";
         public static final String COLUMN_NAME_STOP_ON_STILL = "stop_still";
         public static final String COLUMN_NAME_LOCATION_PROVIDER = "service_provider";
         public static final String COLUMN_NAME_INTERVAL = "interval";
