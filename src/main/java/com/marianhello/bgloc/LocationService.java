@@ -629,9 +629,11 @@ public class LocationService extends Service implements ProviderDelegate {
                 if (mListener != null)
                     mListener.onRequestedAbortUpdates();
             }
-
+            
             // All 2xx statuses are okay
-            if (responseCode >= 200 && responseCode < 300) {
+            boolean isStatusOkay = responseCode >= 200 && responseCode < 300;
+            
+            if (!isStatusOkay) {
                 logger.warn("Server error while posting locations responseCode: {}", responseCode);
                 return false;
             }
