@@ -36,9 +36,10 @@ android {
         resValue "string", "content_authority", applicationId + '.provider'
         resValue "string", "account_type", applicationId
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        minSdkVersion 15
+        minSdkVersion 16
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = ["supportLibVersion": supportLibVersion]
     }
 
     sourceSets {
