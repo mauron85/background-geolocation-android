@@ -84,12 +84,18 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
 
     @Override
     public void onLocationChanged(Location location) {
+
         logger.debug("Location change: {}", location.toString());
 
         if (lastActivity.getType() == DetectedActivity.STILL) {
-            handleStationary(location);
+
+          handleStationary(location);
+
+          if (mConfig.getStopOnStillActivity()) {
             stopTracking();
-            return;
+          }
+
+          return;
         }
 
         showDebugToast("acy:" + location.getAccuracy() + ",v:" + location.getSpeed());
@@ -147,14 +153,14 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
         } else if (googleApiClient.isConnected()) {
             if (isWatchingActivity) { return; }
             startTracking();
-            if (mConfig.getStopOnStillActivity()) {
-                ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
-                        googleApiClient,
-                        mConfig.getActivitiesInterval(),
-                        detectedActivitiesPI
-                );
-                isWatchingActivity = true;
-            }
+
+            ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
+                    googleApiClient,
+                    mConfig.getActivitiesInterval(),
+                    detectedActivitiesPI
+            );
+            isWatchingActivity = true;
+
         } else {
             googleApiClient.connect();
         }
