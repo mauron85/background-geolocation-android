@@ -519,14 +519,18 @@ public class BackgroundGeolocationFacade {
     private void startBackgroundService() {
         logger.info("Attempt to start bg service");
         synchronized (mLock) {
-            mService.start();
+            if (mService != null) {
+                mService.start();
+            }
         }
     }
 
     private void stopBackgroundService() {
         logger.info("Attempt to stop bg service");
         synchronized (mLock) {
-            mService.stop();
+            if (mService != null) {
+                mService.stop();
+            }
         }
     }
 
