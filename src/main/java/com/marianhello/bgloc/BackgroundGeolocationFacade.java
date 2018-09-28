@@ -417,7 +417,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public void sendCommand(final int commandId) {
-        synchronized (mLock) { 
+        synchronized (mLock) {
             if (mService != null) {
                 mService.executeProviderCommand(commandId, 0);
             }
