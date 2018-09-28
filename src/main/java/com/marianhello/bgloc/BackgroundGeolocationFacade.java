@@ -410,13 +410,17 @@ public class BackgroundGeolocationFacade {
 
     public void switchMode(final int mode) {
         synchronized (mLock) {
-            mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
+            if (mService != null) {
+                mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
+            }
         }
     }
 
     public void sendCommand(final int commandId) {
-        synchronized (mLock) {
-            mService.executeProviderCommand(commandId, 0);
+        synchronized (mLock) { 
+            if (mService != null) {
+                mService.executeProviderCommand(commandId, 0);
+            }
         }
     }
 
