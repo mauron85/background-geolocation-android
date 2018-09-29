@@ -410,13 +410,17 @@ public class BackgroundGeolocationFacade {
 
     public void switchMode(final int mode) {
         synchronized (mLock) {
-            mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
+            if (mService != null) {
+                mService.executeProviderCommand(LocationProvider.CMD_SWITCH_MODE, mode);
+            }
         }
     }
 
     public void sendCommand(final int commandId) {
         synchronized (mLock) {
-            mService.executeProviderCommand(commandId, 0);
+            if (mService != null) {
+                mService.executeProviderCommand(commandId, 0);
+            }
         }
     }
 
@@ -519,14 +523,18 @@ public class BackgroundGeolocationFacade {
     private void startBackgroundService() {
         logger.info("Attempt to start bg service");
         synchronized (mLock) {
-            mService.start();
+            if (mService != null) {
+                mService.start();
+            }
         }
     }
 
     private void stopBackgroundService() {
         logger.info("Attempt to stop bg service");
         synchronized (mLock) {
-            mService.stop();
+            if (mService != null) {
+                mService.stop();
+            }
         }
     }
 
