@@ -208,6 +208,16 @@ public class BackgroundGeolocationFacade {
 
                     return;
                 }
+
+                case LocationService.MSG_ON_HTTP_AUTHORIZATION: {
+                    logger.debug("Received MSG_ON_HTTP_AUTHORIZATION");
+
+                    if (mDelegate != null) {
+                        mDelegate.onHttpAuthorization();
+                    } 
+
+                    return;
+                }
             }
         }
     };

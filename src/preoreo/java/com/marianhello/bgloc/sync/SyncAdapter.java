@@ -171,6 +171,12 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
                 broadcastMessage(bundle);
             }
 
+            if (responseCode == 401) {
+                Bundle bundle = new Bundle();
+                bundle.putInt("action", LocationService.MSG_ON_HTTP_AUTHORIZATION);
+                broadcastMessage(bundle);
+            }
+
             if (builder != null) {
                 if (isStatusOkay) {
                     builder.setContentText("Sync completed");

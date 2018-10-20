@@ -14,5 +14,6 @@ public interface PluginDelegate {
     void onActitivyChanged(BackgroundActivity activity);
     void onServiceStatusChanged(int status);
     void onAbortRequested();
+    void onHttpAuthorization();
     void onError(PluginException error);
 }
