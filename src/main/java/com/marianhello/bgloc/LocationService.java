@@ -94,6 +94,8 @@ public class LocationService extends Service implements ProviderDelegate {
 
     public static final int MSG_ON_ABORT_REQUESTED = 106;
 
+    public static final int MSG_ON_HTTP_AUTHORIZATION = 107;
+
     public static final int SERVICE_STOPPED = 0;
     public static final int SERVICE_STARTED = 1;
 
@@ -195,6 +197,11 @@ public class LocationService extends Service implements ProviderDelegate {
             @Override
             public void onRequestedAbortUpdates() {
                 handleRequestedAbortUpdates();
+            }
+
+            @Override
+            public void onHttpAuthorizationUpdates() {
+                handleHttpAuthorizationUpdates();
             }
         });
         mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME,
@@ -630,6 +637,11 @@ public class LocationService extends Service implements ProviderDelegate {
                     mListener.onRequestedAbortUpdates();
             }
 
+            if (responseCode == 401) {
+                if (mListener != null)
+                    mListener.onHttpAuthorizationUpdates();
+            }
+
             // All 2xx statuses are okay
             boolean isStatusOkay = responseCode >= 200 && responseCode < 300;
 
@@ -645,6 +657,12 @@ public class LocationService extends Service implements ProviderDelegate {
     public void handleRequestedAbortUpdates() {
         Bundle bundle = new Bundle();
         bundle.putInt("action", MSG_ON_ABORT_REQUESTED);
+        broadcastMessage(bundle);
+    }
+
+    public void handleHttpAuthorizationUpdates() {
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_HTTP_AUTHORIZATION);
         broadcastMessage(bundle);
     }
 
@@ -705,5 +723,7 @@ public class LocationService extends Service implements ProviderDelegate {
     public interface PostLocationTaskListener
     {
         void onRequestedAbortUpdates();
+
+        void onHttpAuthorizationUpdates();
     }
 }
