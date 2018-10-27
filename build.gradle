@@ -124,11 +124,13 @@ dependencies {
         oreoDependencies.each {
             add(it.configuration, it.dependency)
         }
+
+        implementation fileTree(include: ['*.jar'], dir: 'libs')
     } else {
         preoreoDependencies.each {
             add(it.configuration, it.dependency)
         }
-    }
 
-    compile fileTree(include: ['*.jar'], dir: 'libs')
+        compile fileTree(include: ['*.jar'], dir: 'libs')
+    }
 }
