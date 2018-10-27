@@ -6,66 +6,103 @@ def DEFAULT_TARGET_SDK_VERSION = 23
 def DEFAULT_PLAY_SERVICES_VERSION = "11+"
 def DEFAULT_SUPPORT_LIB_VERSION = "23.0.1"
 
-ext.getApplicationId = { ->
-    def applicationId = "com.marianhello.app"
-    if (findProject(':app') != null) {
-        applicationId = project(':app').android.defaultConfig.applicationId
-    }
-    return applicationId
-}
+def MOCKITO_CORE_VERSION = "1.10.19"
+def POWERMOCK_VERSION = "1.6.2"
+def ROBOLECTRIC_VERSION = "3.0"
+def JUNIT_VERSION = "4.12"
+def FEST_ASSERT_CORE_VERSION = "2.0M10"
+def SUPPORT_TEST_VERSION = "0.5"
 
-ext.getPlayServicesVersion = { ->
-    // Check for application-defined play-services version
-    def playServicesVersion = DEFAULT_PLAY_SERVICES_VERSION
-    if (rootProject.hasProperty('playServicesVersion')) {
-        playServicesVersion = rootProject.playServicesVersion
-    } else if (rootProject.hasProperty('googlePlayServicesVersion')) {
-        playServicesVersion = rootProject.googlePlayServicesVersion
+ext {
+    getApplicationId = { ->
+        def applicationId = "com.marianhello.app"
+        if (findProject(':app') != null) {
+            applicationId = project(':app').android.defaultConfig.applicationId
+        }
+        return applicationId
     }
 
-    return playServicesVersion
-}
+    getPlayServicesVersion = { ->
+        // Check for application-defined play-services version
+        def playServicesVersion = DEFAULT_PLAY_SERVICES_VERSION
+        if (rootProject.hasProperty('playServicesVersion')) {
+            playServicesVersion = rootProject.playServicesVersion
+        } else if (rootProject.hasProperty('googlePlayServicesVersion')) {
+            playServicesVersion = rootProject.googlePlayServicesVersion
+        }
 
-ext.getSupportLibVersion = { ->
-    def supportLibVersion = DEFAULT_SUPPORT_LIB_VERSION
-    if (rootProject.hasProperty('supportLibVersion')) {
-        supportLibVersion = rootProject.supportLibVersion
+        return playServicesVersion
     }
-    return supportLibVersion
-}
 
-ext.getCompileSdkVersion = { ->
-    def compileSdkVersion = DEFAULT_COMPILE_SDK_VERSION
-    if (rootProject.hasProperty('compileSdkVersion')) {
-        compileSdkVersion = rootProject.compileSdkVersion
+    getSupportLibVersion = { ->
+        def supportLibVersion = DEFAULT_SUPPORT_LIB_VERSION
+        if (rootProject.hasProperty('supportLibVersion')) {
+            supportLibVersion = rootProject.supportLibVersion
+        }
+        return supportLibVersion
     }
-    return compileSdkVersion
-}
 
-ext.getBuildToolsVersion = { ->
-    def buildToolsVersion = DEFAULT_BUILD_TOOLS_VERSION
-    if (rootProject.hasProperty('buildToolsVersion')) {
-        buildToolsVersion = rootProject.buildToolsVersion
+    getCompileSdkVersion = { ->
+        def compileSdkVersion = DEFAULT_COMPILE_SDK_VERSION
+        if (rootProject.hasProperty('compileSdkVersion')) {
+            compileSdkVersion = rootProject.compileSdkVersion
+        }
+        return compileSdkVersion
     }
-    return buildToolsVersion
-}
 
-ext.getTargetSdkVersion = { ->
-    def targetSdkVersion = DEFAULT_TARGET_SDK_VERSION
-    if (rootProject.hasProperty('targetSdkVersion')) {
-        targetSdkVersion = rootProject.targetSdkVersion
+    getBuildToolsVersion = { ->
+        def buildToolsVersion = DEFAULT_BUILD_TOOLS_VERSION
+        if (rootProject.hasProperty('buildToolsVersion')) {
+            buildToolsVersion = rootProject.buildToolsVersion
+        }
+        return buildToolsVersion
     }
-    return targetSdkVersion
-}
 
-ext.getGradle3Support = { ->
-    if (rootProject.hasProperty('gradle3EXPERIMENTAL')) {
-        return true;
+    getTargetSdkVersion = { ->
+        def targetSdkVersion = DEFAULT_TARGET_SDK_VERSION
+        if (rootProject.hasProperty('targetSdkVersion')) {
+            targetSdkVersion = rootProject.targetSdkVersion
+        }
+        return targetSdkVersion
     }
-    def gradleVersionCurrent = GradleVersion.current();
-    if (gradleVersionCurrent >= GradleVersion.version('4.4')) {
-        println "Enabling gradle3EXPERIMENTAL support for gradle $gradleVersionCurrent"
-        return true;
+
+    getGradle3Support = { ->
+        if (rootProject.hasProperty('gradle3EXPERIMENTAL')) {
+            return true;
+        }
+        def gradleVersionCurrent = GradleVersion.current();
+        if (gradleVersionCurrent >= GradleVersion.version('4.4')) {
+            println "Enabling gradle3EXPERIMENTAL support for gradle $gradleVersionCurrent"
+            return true;
+        }
+        return false;
     }
-    return false;
+
+    androidLibs = [
+        supportAnnotations: [group: 'com.android.support', name: 'support-annotations', version: '23.1.1'],
+        supportCompat: [group: 'com.android.support', name: 'support-compat', version: '26+'],
+        appcompat: [group: 'com.android.support', name: 'appcompat-v7', version: getSupportLibVersion()],
+        playServicesLocation: [group: 'com.google.android.gms', name: 'play-services-location', version: getPlayServicesVersion()],
+    ]
+
+    testLibs = [
+        testRunner: [group: 'com.android.support.test', name: 'runner', version: SUPPORT_TEST_VERSION],
+        testRules: [group: 'com.android.support.test', name: 'rules', version: SUPPORT_TEST_VERSION],
+        junit: [group: 'junit', name: 'junit', version: JUNIT_VERSION],
+        json: [group: 'org.json', name: 'json', version: '20140107'],
+        powermockMockito: [group: 'org.powermock', name: 'powermock-api-mockito', version: POWERMOCK_VERSION],
+        powermockjUnit: [group: 'org.powermock', name: 'powermock-module-junit4-rule', version: POWERMOCK_VERSION],
+        powermockClassloading: [group: 'org.powermock', name: 'powermock-classloading-xstream', version: POWERMOCK_VERSION],
+        mockitoCore: [group: 'org.mockito', name: 'mockito-core', version: MOCKITO_CORE_VERSION],
+        festAssertCore: [group: 'org.easytesting', name: 'fest-assert-core', version: FEST_ASSERT_CORE_VERSION],
+        robolectric: [group: 'org.robolectric', name: 'robolectric', version: ROBOLECTRIC_VERSION],
+    ]
+
+    libs = [
+        reactNative: [group: 'com.facebook.react', name: 'react-native', version: '+'],
+        permissions: [group: 'com.intentfilter', name: 'android-permissions', version: '0.1.6'],
+        logback: [group: 'com.github.tony19', name: 'logback-android', version: '1.1.1-9'],
+        slf4j: [group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'],
+        promise: [group: 'com.github.jparkie', name: 'promise', version: '1.0.3'],
+    ]
 }
