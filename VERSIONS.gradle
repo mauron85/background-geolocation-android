@@ -3,6 +3,7 @@ import org.gradle.util.GradleVersion
 def DEFAULT_COMPILE_SDK_VERSION = 23
 def DEFAULT_BUILD_TOOLS_VERSION = "23.0.1"
 def DEFAULT_TARGET_SDK_VERSION = 23
+def DEFAULT_MIN_SDK_VERSION = 15
 def DEFAULT_PLAY_SERVICES_VERSION = "11+"
 def DEFAULT_SUPPORT_LIB_VERSION = "23.0.1"
 
@@ -14,6 +15,10 @@ def FEST_ASSERT_CORE_VERSION = "2.0M10"
 def SUPPORT_TEST_VERSION = "0.5"
 
 ext {
+    hasRootProject = { ->
+        return rootProject != null // for testing
+    }
+
     getApplicationId = { ->
         def applicationId = "com.marianhello.app"
         if (findProject(':app') != null) {
@@ -25,6 +30,9 @@ ext {
     getPlayServicesVersion = { ->
         // Check for application-defined play-services version
         def playServicesVersion = DEFAULT_PLAY_SERVICES_VERSION
+        if (!hasRootProject()) {
+            return playServicesVersion
+        }
         if (rootProject.hasProperty('playServicesVersion')) {
             playServicesVersion = rootProject.playServicesVersion
         } else if (rootProject.hasProperty('googlePlayServicesVersion')) {
@@ -36,6 +44,9 @@ ext {
 
     getSupportLibVersion = { ->
         def supportLibVersion = DEFAULT_SUPPORT_LIB_VERSION
+        if (!hasRootProject()) {
+            return supportLibVersion
+        }
         if (rootProject.hasProperty('supportLibVersion')) {
             supportLibVersion = rootProject.supportLibVersion
         }
@@ -44,6 +55,9 @@ ext {
 
     getCompileSdkVersion = { ->
         def compileSdkVersion = DEFAULT_COMPILE_SDK_VERSION
+        if (!hasRootProject()) {
+            return compileSdkVersion
+        }
         if (rootProject.hasProperty('compileSdkVersion')) {
             compileSdkVersion = rootProject.compileSdkVersion
         }
@@ -52,6 +66,9 @@ ext {
 
     getBuildToolsVersion = { ->
         def buildToolsVersion = DEFAULT_BUILD_TOOLS_VERSION
+        if (!hasRootProject()) {
+            return buildToolsVersion
+        }
         if (rootProject.hasProperty('buildToolsVersion')) {
             buildToolsVersion = rootProject.buildToolsVersion
         }
@@ -60,27 +77,44 @@ ext {
 
     getTargetSdkVersion = { ->
         def targetSdkVersion = DEFAULT_TARGET_SDK_VERSION
+        if (!hasRootProject()) {
+            return targetSdkVersion
+        }
         if (rootProject.hasProperty('targetSdkVersion')) {
             targetSdkVersion = rootProject.targetSdkVersion
         }
         return targetSdkVersion
     }
 
-    getGradle3Support = { ->
-        if (rootProject.hasProperty('gradle3EXPERIMENTAL')) {
-            return true;
+    getMinSdkVersion = { ->
+        def minSdkVersion = DEFAULT_MIN_SDK_VERSION
+        if (!hasRootProject()) {
+            return minSdkVersion
         }
-        def gradleVersionCurrent = GradleVersion.current();
+        if (rootProject.hasProperty('minSdkVersion')) {
+            minSdkVersion = rootProject.minSdkVersion
+        }
+        return minSdkVersion
+    }
+
+    getGradle3Support = { ->
+        if (!hasRootProject()) {
+            return false
+        }
+        if (rootProject.hasProperty('gradle3EXPERIMENTAL')) {
+            return true
+        }
+        def gradleVersionCurrent = GradleVersion.current()
         if (gradleVersionCurrent >= GradleVersion.version('4.4')) {
             println "Enabling gradle3EXPERIMENTAL support for gradle $gradleVersionCurrent"
-            return true;
+            return true
         }
-        return false;
+        return false
     }
 
     androidLibs = [
         supportAnnotations: [group: 'com.android.support', name: 'support-annotations', version: '23.1.1'],
-        supportCompat: [group: 'com.android.support', name: 'support-compat', version: '26+'],
+        supportCompat: [group: 'com.android.support', name: 'support-compat', version: getSupportLibVersion()],
         appcompat: [group: 'com.android.support', name: 'appcompat-v7', version: getSupportLibVersion()],
         playServicesLocation: [group: 'com.google.android.gms', name: 'play-services-location', version: getPlayServicesVersion()],
     ]
