@@ -64,6 +64,7 @@ public class SQLiteConfigurationDAOTest {
         config.setNotificationTitle("test");
         config.setNotificationText("in progress");
         config.setNotificationIconColor("yellow");
+        config.setNotificationsEnabled(true);
 
         dao.persistConfiguration(config);
         dao.persistConfiguration(config); // try once more
