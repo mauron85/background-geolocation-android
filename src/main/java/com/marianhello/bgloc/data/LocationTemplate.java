@@ -7,6 +7,6 @@ import org.json.JSONException;
  */
 
 public interface LocationTemplate {
-    boolean isEmpty();
     Object locationToJson(BackgroundLocation location) throws JSONException;
+    boolean isEmpty();
 }

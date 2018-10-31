@@ -16,6 +16,7 @@ import com.marianhello.bgloc.data.sqlite.SQLiteConfigurationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -102,7 +103,7 @@ public class SQLiteConfigurationDAOTest {
     }
 
     @Test
-    public void persistConfigurationWithArrayList() {
+    public void persistConfigurationWithArrayListTemplate() {
         Context ctx = InstrumentationRegistry.getTargetContext();
         SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
         SQLiteConfigurationDAO dao = new SQLiteConfigurationDAO(db);
@@ -133,7 +134,7 @@ public class SQLiteConfigurationDAOTest {
     }
 
     @Test
-    public void persistConfigurationWithHashMap() {
+    public void persistConfigurationWithHashMapTemplate() {
         Context ctx = InstrumentationRegistry.getTargetContext();
         SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
         SQLiteConfigurationDAO dao = new SQLiteConfigurationDAO(db);
@@ -162,4 +163,39 @@ public class SQLiteConfigurationDAOTest {
             Assert.fail(e.getMessage());
         }
     }
+
+    @Test
+    public void persistConfigurationWithComplexTemplate() throws JSONException {
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
+        SQLiteConfigurationDAO dao = new SQLiteConfigurationDAO(db);
+
+        Config config = Config.getDefault();
+        JSONObject template = new JSONObject(
+                "{\"data\":{\"Id\":\"@id\"," +
+                        "\"Provider\":\"@provider\"," +
+                        "\"Time\":\"@time\"," +
+                        "\"Altitude\":\"@altitude\"," +
+                        "\"Latitude\":\"@latitude\"," +
+                        "\"Longitude\":\"@longitude\"," +
+                        "\"Foo\":\"bar\"," +
+                        "\"LocationProvider\":\"@locationProvider\"," +
+                        "\"Accuracy\":\"@accuracy\"," +
+                        "\"Speed\":\"@speed\"," +
+                        "\"Bearing\":\"@bearing\"}" +
+                        "}"
+        );
+
+        LocationTemplate tpl = LocationTemplateFactory.fromJSON(template);
+        config.setTemplate(tpl);
+        dao.persistConfiguration(config);
+
+        try {
+            Config storedConfig = dao.retrieveConfiguration();
+            Assert.assertEquals(config.getTemplate(), storedConfig.getTemplate());
+        } catch (JSONException e) {
+            Assert.fail(e.getMessage());
+        }
+    }
+
 }

@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.text.TextUtils;
 import android.util.JsonWriter;
 
+import com.marianhello.bgloc.data.AbstractLocationTemplate;
 import com.marianhello.bgloc.data.ArrayListLocationTemplate;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
@@ -16,11 +17,16 @@ import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
 import com.marianhello.logging.LoggerManager;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -75,7 +81,7 @@ public class BatchManager {
         String orderBy = SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME + " ASC";
 
         Cursor cursor = null;
-        JsonWriter writer = null;
+        LocationWriter writer = null;
 
         try {
             db.beginTransactionNonExclusive();
@@ -96,9 +102,9 @@ public class BatchManager {
 
             File file = File.createTempFile("locations", ".json");
             FileOutputStream fs = new FileOutputStream(file);
-            writer = new JsonWriter(new OutputStreamWriter(fs, "UTF-8"));
-            writer.beginArray();
+            writer = new LocationWriter(fs, template);
 
+            writer.beginArray();
             while (cursor.moveToNext()) {
                 long locationId = cursor.getLong(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry._ID));
                 int locationProvider = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER));
@@ -106,7 +112,6 @@ public class BatchManager {
                 double latitude = cursor.getDouble(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LATITUDE));
                 double longitude = cursor.getDouble(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LONGITUDE));
                 long time = cursor.getLong(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME));
-                ;
                 float accuracy = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_ACCURACY));
                 float speed = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_SPEED));
                 float bearing = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_BEARING));
@@ -119,145 +124,34 @@ public class BatchManager {
                 boolean hasRadius = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS)) == 1;
                 int mockFlags = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS));
 
-                if (template instanceof HashMapLocationTemplate) {
-                    writer.beginObject();
-                    HashMapLocationTemplate hashTemplate = (HashMapLocationTemplate) template;
-                    Iterator it = hashTemplate.iterator();
-                    while (it.hasNext()) {
-                        Map.Entry<String, String> pair = (Map.Entry) it.next();
-                        String key = pair.getKey();
-                        String value = String.valueOf(pair.getValue());
-
-                        if ("@id".equals(value)) {
-                            writer.name(key).value(locationId);
-                        } else if ("@locationProvider".equals(value)) {
-                            writer.name(key).value(locationProvider);
-                        } else if ("@provider".equals(value)) {
-                            writer.name(key).value(provider);
-                        } else if ("@time".equals(value)) {
-                            writer.name(key).value(time);
-                        } else if ("@latitude".equals(value)) {
-                            writer.name(key).value(latitude);
-                        } else if ("@longitude".equals(value)) {
-                            writer.name(key).value(longitude);
-                        } else if ("@accuracy".equals(value)) {
-                            if (hasAccuracy) {
-                                writer.name(key).value(accuracy);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@speed".equals(value)) {
-                            if (hasSpeed) {
-                                writer.name(key).value(speed);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@bearing".equals(value)) {
-                            if (hasBearing) {
-                                writer.name(key).value(bearing);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@altitude".equals(value)) {
-                            if (hasAltitude) {
-                                writer.name(key).value(altitude);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@radius".equals(value)) {
-                            if (hasRadius) {
-                                writer.name(key).value(radius);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@isFromMockProvider".equals(value)) {
-                            boolean hasIsFromMockProvider = ((mockFlags & 0x0002) >> 1) == 1;
-                            if (hasIsFromMockProvider) {
-                                writer.name(key).value((mockFlags & 0x0001) == 1);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else if ("@mockLocationsEnabled".equals(value)) {
-                            boolean hasMockLocationsEnabled = ((mockFlags & 0x0008) >> 3) == 1;
-                            if (hasMockLocationsEnabled) {
-                                writer.name(key).value(((mockFlags & 0x0004) >> 2) == 1);
-                            } else {
-                                writer.name(key).nullValue();
-                            }
-                        } else {
-                            writer.name(key).value(value);
-                        }
-                    }
-                    writer.endObject();
-                } else if (template instanceof ArrayListLocationTemplate) {
-                    ArrayListLocationTemplate hashTemplate = (ArrayListLocationTemplate) template;
-                    writer.beginArray();
-                    Iterator it = hashTemplate.iterator();
-                    while (it.hasNext()) {
-                        String key = it.next().toString();
-                        if ("@id".equals(key)) {
-                            writer.value(locationId);
-                        } else if ("@locationProvider".equals(key)) {
-                            writer.value(locationProvider);
-                        } else if ("@provider".equals(key)) {
-                            writer.value(provider);
-                        } else if ("@time".equals(key)) {
-                            writer.value(time);
-                        } else if ("@latitude".equals(key)) {
-                            writer.value(latitude);
-                        } else if ("@longitude".equals(key)) {
-                            writer.value(longitude);
-                        } else if ("@accuracy".equals(key)) {
-                            if (hasAccuracy) {
-                                writer.value(accuracy);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@speed".equals(key)) {
-                            if (hasSpeed) {
-                                writer.value(speed);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@bearing".equals(key)) {
-                            if (hasBearing) {
-                                writer.value(bearing);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@altitude".equals(key)) {
-                            if (hasAltitude) {
-                                writer.value(altitude);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@radius".equals(key)) {
-                            if (hasRadius) {
-                                writer.value(radius);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@isFromMockProvider".equals(key)) {
-                            boolean hasIsFromMockProvider = ((mockFlags & 0x0002) >> 1) == 1;
-                            if (hasIsFromMockProvider) {
-                                writer.value((mockFlags & 0x0001) == 1);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else if ("@mockLocationsEnabled".equals(key)) {
-                            boolean hasMockLocationsEnabled = ((mockFlags & 0x0008) >> 3) == 1;
-                            if (hasMockLocationsEnabled) {
-                                writer.value(((mockFlags & 0x0004) >> 2) == 1);
-                            } else {
-                                writer.nullValue();
-                            }
-                        } else {
-                            writer.value(key);
-                        }
-                    }
-                    writer.endArray();
+                BackgroundLocation location = new BackgroundLocation();
+                location.setLocationId(locationId);
+                location.setLocationProvider(locationProvider);
+                location.setProvider(provider);
+                location.setLatitude(latitude);
+                location.setLongitude(longitude);
+                location.setTime(time);
+                if (hasAccuracy) {
+                    location.setAccuracy(accuracy);
                 }
+                if (hasAltitude) {
+                    location.setAltitude(altitude);
+                }
+                if (hasSpeed) {
+                    location.setSpeed(speed);
+                }
+                if (hasBearing) {
+                    location.setBearing(bearing);
+                }
+                if (hasRadius) {
+                    location.setRadius(radius);
+                }
+                location.setMockFlags(mockFlags);
+
+
+                writer.write(location);
             }
+
             writer.endArray();
             writer.close();
             fs.close();
@@ -309,5 +203,103 @@ public class BatchManager {
         ContentValues values = new ContentValues();
         values.put(SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.DELETED);
         db.update(SQLiteLocationContract.LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
+    }
+
+    private static class LocationTemplateWriter {
+        private BackgroundLocation location;
+        private JsonWriter writer;
+
+        public LocationTemplateWriter(JsonWriter writer, BackgroundLocation location) {
+            this.writer = writer;
+            this.location = location;
+        }
+
+        private void writeValue(Object value) throws IOException {
+            if (value instanceof String ) {
+                writer.value((String) value);
+            } else if (value instanceof Map) {
+                writeMap((Map) value);
+            } else if (value instanceof List) {
+                writeList((List) value);
+            } else if (Integer.class.isInstance(value)) {
+                writer.value((Integer) value);
+            } else if (Double.class.isInstance(value)) {
+                writer.value((Double) value);
+            } else if (Float.class.isInstance(value)) {
+                writer.value((Float) value);
+            } else if (Long.class.isInstance(value)) {
+                writer.value((Long) value);
+            } else if (Boolean.class.isInstance(value)) {
+                writer.value((Boolean) value);
+            } else if (value == JSONObject.NULL) {
+                writer.nullValue();
+            } else {
+                writer.value(String.valueOf(value));
+            }
+        }
+
+        public void writeMap(Map values) throws IOException {
+            writer.beginObject();
+            Iterator<?> it = values.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<String, Object> pair = (Map.Entry) it.next();
+                String key = pair.getKey();
+                Object value = pair.getValue();
+                Object locationValue = null;
+                if (value instanceof String) {
+                    locationValue = location.getValueForKey((String)value);
+                }
+                writer.name(key);
+                writeValue(locationValue != null ? locationValue : value);
+            }
+            writer.endObject();
+        }
+
+        public void writeList(List values) throws IOException {
+            writer.beginArray();
+            Iterator<?> it = values.iterator();
+            while (it.hasNext()) {
+                Object value = it.next();
+                Object locationValue = null;
+                if (value instanceof  String) {
+                    locationValue = location.getValueForKey((String) value);
+                }
+                writeValue(locationValue != null ? locationValue : value);
+            }
+            writer.endArray();
+        }
+    }
+
+    private static class LocationWriter {
+        private JsonWriter writer = null;
+        private LocationTemplate template;
+
+        public LocationWriter(FileOutputStream fos, LocationTemplate template) throws IOException {
+            writer = new JsonWriter(new OutputStreamWriter(fos, "UTF-8"));
+            this.template = template;
+        }
+
+        public void beginArray() throws IOException {
+            writer.beginArray();
+        }
+
+        public void endArray() throws IOException {
+            writer.endArray();
+        }
+
+        public void close() throws IOException {
+            writer.close();
+        }
+
+        public void write(BackgroundLocation location) throws IOException {
+            LocationTemplateWriter writer = new LocationTemplateWriter(this.writer, location);
+            if (template instanceof HashMapLocationTemplate) {
+                HashMapLocationTemplate hashTemplate = (HashMapLocationTemplate) template;
+                writer.writeMap(hashTemplate.toMap());
+            } else if (template instanceof ArrayListLocationTemplate) {
+                ArrayListLocationTemplate listTemplate = (ArrayListLocationTemplate) template;
+                writer.writeList(listTemplate.toList());
+            }
+        }
     }
 }

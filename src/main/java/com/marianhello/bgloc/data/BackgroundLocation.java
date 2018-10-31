@@ -848,7 +848,7 @@ public class BackgroundLocation implements Parcelable {
             return hasBearing ? bearing : JSONObject.NULL;
         }
         if ("@radius".equals(key)) {
-            return hasRadius ?radius : JSONObject.NULL;
+            return hasRadius ? radius : JSONObject.NULL;
         }
         if ("@isFromMockProvider".equals(key)) {
             return hasIsFromMockProvider() ? isFromMockProvider() : JSONObject.NULL;

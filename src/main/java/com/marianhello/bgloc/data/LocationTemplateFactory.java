@@ -1,5 +1,7 @@
 package com.marianhello.bgloc.data;
 
+import com.marianhello.utils.Convert;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,26 +19,15 @@ public class LocationTemplateFactory {
 
     public static LocationTemplate fromJSON(Object json) throws JSONException {
         if (json instanceof JSONObject) {
-            HashMap templateMap = new HashMap<String, Object>();
             JSONObject jsonObject = (JSONObject) json;
-            Iterator<?> it = jsonObject.keys();
-            while (it.hasNext()) {
-                String key = (String) it.next();
-                Object value = jsonObject.get(key);
-                templateMap.put(key, value);
-            }
 
-            return new HashMapLocationTemplate(templateMap);
+            return new HashMapLocationTemplate((HashMap) Convert.toMap(jsonObject));
         } else if (json instanceof JSONArray) {
-            ArrayList templateList = new ArrayList();
             JSONArray jsonArray = (JSONArray) json;
-            for (int i = 0, size = jsonArray.length(); i < size; i++) {
-                Object value = jsonArray.get(i);
-                templateList.add(value);
-            }
 
-            return new ArrayListLocationTemplate(templateList);
+            return new ArrayListLocationTemplate((ArrayList) Convert.toList(jsonArray));
         }
+
         return null;
     }
 

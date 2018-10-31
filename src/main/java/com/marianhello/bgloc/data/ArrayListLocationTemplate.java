@@ -1,13 +1,12 @@
 package com.marianhello.bgloc.data;
 
-import android.support.annotation.NonNull;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by finch on 15.12.2017.
@@ -36,22 +35,7 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
 
     @Override
     public Object locationToJson(BackgroundLocation location) throws JSONException {
-        JSONArray jArray = new JSONArray();
-        if (mList == null) {
-            return jArray;
-        }
-
-        Iterator it = mList.iterator();
-        while (it.hasNext()) {
-            Object value = null;
-            Object key = it.next();
-            if (key instanceof String) {
-                value = location.getValueForKey((String)key);
-            }
-            jArray.put(value != null ? value : key);
-        }
-
-        return jArray;
+        return LocationMapper.map(location).withList(mList);
     }
 
     public Iterator iterator() {
@@ -81,11 +65,7 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
             return "null";
         }
 
-        JSONArray jArray = new JSONArray();
-        Iterator<?> it = (mList).iterator();
-        while (it.hasNext()) {
-            jArray.put(it.next());
-        }
+        JSONArray jArray = new JSONArray(mList);
         return jArray.toString();
     }
 
@@ -95,6 +75,10 @@ public class ArrayListLocationTemplate extends AbstractLocationTemplate implemen
         }
 
         return mList.toArray();
+    }
+
+    public List toList() {
+        return mList;
     }
 
     @Override

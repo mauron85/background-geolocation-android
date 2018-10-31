@@ -12,6 +12,7 @@ import com.marianhello.bgloc.data.ArrayListLocationTemplate;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
+import com.marianhello.bgloc.data.LocationTemplateFactory;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
@@ -19,10 +20,14 @@ import com.marianhello.bgloc.sync.BatchManager;
 
 import junit.framework.Assert;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -93,7 +98,7 @@ public class BatchManagerTest {
     }
 
     @Test
-    public void createBatch() {
+    public void testCreateBatch() {
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         int i = 1;
@@ -147,7 +152,7 @@ public class BatchManagerTest {
     }
 
     @Test
-    public void createBatchWithArrayListTemplate() {
+    public void testCreateBatchWithArrayListTemplate() {
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         for (int i = 1; i < 3; i++) {
@@ -212,7 +217,7 @@ public class BatchManagerTest {
     }
 
     @Test
-    public void createBatchWithMapHashTemplate() {
+    public void testCreateBatchWithMapHashTemplate() {
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         for (int i = 1; i < 3; i++) {
@@ -226,7 +231,6 @@ public class BatchManagerTest {
             location.setStatus(BackgroundLocation.SYNC_PENDING);
             dao.persistLocation(location);
         }
-
 
         HashMap map = new HashMap<String, String>();
         map.put("lat", "@latitude");
@@ -285,13 +289,14 @@ public class BatchManagerTest {
     }
 
     @Test
-    public void setBatchCompleted() {
+    public void testSetBatchCompleted() {
         SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         int i = 1;
         BackgroundLocation location;
         for (int j = i; j < 100; j++) {
             location = new BackgroundLocation();
+            location.setProvider("test");
             location.setTime(1000 + i);
             location.setLatitude(40.21 + i);
             location.setLongitude(23.45 + i);
@@ -326,5 +331,233 @@ public class BatchManagerTest {
         } catch (Exception e) {
             Assert.fail(e.getMessage());
         }
+    }
+
+    @Test
+    public void testCreateBatchWithNestedTemplate() throws JSONException, IOException {
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        ArrayList<BackgroundLocation> testLocations = new ArrayList<BackgroundLocation>();
+
+        for (int i = 0; i < 3; i++) {
+            BackgroundLocation location = new BackgroundLocation();
+            location.setProvider("test");
+            location.setTime(1000 * i);
+            location.setAltitude(999 + i);
+            location.setLatitude(30.21 + i);
+            location.setLongitude(13.45 + i);
+            location.setAccuracy(9);
+            location.setSpeed(66);
+            location.setBearing(99);
+            location.setBatchStartMillis(1000L);
+            location.setIsFromMockProvider(true);
+            location.setMockLocationsEnabled(false);
+            location.setStatus(BackgroundLocation.SYNC_PENDING);
+            dao.persistLocation(location);
+            testLocations.add(location);
+        }
+
+        JSONObject templateJSON = new JSONObject(
+                "{\"data\":{\"Id-Number\":\"@id\"," +
+                        "\"Provider-String\":\"@provider\"," +
+                        "\"Time-Number\":\"@time\"," +
+                        "\"Altitude-Number\":\"@altitude\"," +
+                        "\"Latitude-Number\":\"@latitude\"," +
+                        "\"Longitude-Number\":\"@longitude\"," +
+                        "\"Foo-String\":\"bar\"," +
+                        "\"LocationProvider-Number\":\"@locationProvider\"," +
+                        "\"Accuracy-Number\":\"@accuracy\"," +
+                        "\"Speed-Number\":\"@speed\"," +
+                        "\"Bearing-Number\":\"@bearing\"," +
+                        "\"FooNumber-Number\":111}" +
+                        "}"
+        );
+        LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
+
+        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        File batchFile = batchManager.createBatch(3000L, 0, template);
+
+        ArrayList<HashMap<String, Object>> hashLocations = new ArrayList();
+        JsonReader reader = new JsonReader(new FileReader(batchFile));
+        reader.beginArray();
+        while (reader.hasNext()) {
+            reader.beginObject();
+            if (reader.hasNext() && "data".equals(reader.nextName())) {
+                HashMap hashLocation = new HashMap<String, Object>();
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    String name = reader.nextName();
+                    if (name.endsWith("-String")) {
+                        hashLocation.put(name, reader.nextString());
+                    } else if (name.endsWith("-Number")) {
+                        hashLocation.put(name, reader.nextDouble());
+                    } else if (name.endsWith("-Boolean")) {
+                        hashLocation.put(name, reader.nextBoolean());
+                    } else {
+                        reader.skipValue();
+                    }
+                }
+                reader.endObject();
+                hashLocations.add(hashLocation);
+            }
+            reader.endObject();
+        }
+        reader.endArray();
+
+        Assert.assertEquals(3, hashLocations.size());
+        int i = 0;
+        for (HashMap l : hashLocations) {
+            Assert.assertEquals("test", l.get("Provider-String"));
+            Assert.assertEquals(0, (Double) l.get("LocationProvider-Number"), 0);
+            Assert.assertEquals(9, (Double) l.get("Accuracy-Number"), 0);
+            Assert.assertEquals(99, (Double) l.get("Bearing-Number"), 0);
+            Assert.assertEquals(66, (Double) l.get("Speed-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getAltitude(), (Double) l.get("Altitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getLatitude(), (Double) l.get("Latitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getLongitude(), (Double) l.get("Longitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getTime(), (Double) l.get("Time-Number"), 0);
+            Assert.assertEquals("bar", l.get("Foo-String"));
+            Assert.assertEquals(111, (Double) l.get("FooNumber-Number"), 0);
+            i++;
+        }
+    }
+
+    @Test
+    public void testCreateBatchWithNestedListTemplate() throws JSONException, IOException {
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        ArrayList<BackgroundLocation> testLocations = new ArrayList<BackgroundLocation>();
+
+        for (int i = 0; i < 3; i++) {
+            BackgroundLocation location = new BackgroundLocation();
+            location.setProvider("test");
+            location.setTime(1000 * i);
+            location.setAltitude(999 + i);
+            location.setLatitude(30.21 + i);
+            location.setLongitude(13.45 + i);
+            location.setAccuracy(9);
+            location.setSpeed(66);
+            location.setBearing(99);
+            location.setBatchStartMillis(1000L);
+            location.setIsFromMockProvider(true);
+            location.setMockLocationsEnabled(false);
+            location.setStatus(BackgroundLocation.SYNC_PENDING);
+            dao.persistLocation(location);
+            testLocations.add(location);
+        }
+
+        JSONArray templateJSON = new JSONArray(
+                "[\"@id\"," +
+                    "{" +
+                        "\"Provider-String\":\"@provider\"," +
+                        "\"Time-Number\":\"@time\"," +
+                        "\"Altitude-Number\":\"@altitude\"," +
+                        "\"Latitude-Number\":\"@latitude\"," +
+                        "\"Longitude-Number\":\"@longitude\"," +
+                        "\"Foo-String\":\"bar\"," +
+                        "\"LocationProvider-Number\":\"@locationProvider\"," +
+                        "\"Accuracy-Number\":\"@accuracy\"," +
+                        "\"Speed-Number\":\"@speed\"," +
+                        "\"Bearing-Number\":\"@bearing\"," +
+                        "\"FooNumber-Number\":111" +
+                        "}]"
+        );
+        LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
+        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        File batchFile = batchManager.createBatch(3000L, 0, template);
+
+        ArrayList<HashMap<String, Object>> hashLocations = new ArrayList();
+        JsonReader reader = new JsonReader(new FileReader(batchFile));
+        reader.beginArray();
+        while (reader.hasNext()) {
+            reader.beginArray();
+            while(reader.hasNext()) {
+                HashMap hashLocation = new HashMap<String, Object>();
+                hashLocation.put("id", reader.nextInt());
+                reader.beginObject();
+                while(reader.hasNext()) {
+                    String name = reader.nextName();
+                    if (name.endsWith("-String")) {
+                        hashLocation.put(name, reader.nextString());
+                    } else if (name.endsWith("-Number")) {
+                        hashLocation.put(name, reader.nextDouble());
+                    } else if (name.endsWith("-Boolean")) {
+                        hashLocation.put(name, reader.nextBoolean());
+                    } else {
+                        reader.skipValue();
+                    }
+                }
+                reader.endObject();
+                hashLocations.add(hashLocation);
+            }
+            reader.endArray();
+        }
+
+        Assert.assertEquals(3, hashLocations.size());
+        int i = 0;
+        for (HashMap l : hashLocations) {
+            Assert.assertEquals(i+1, l.get("id"));
+            Assert.assertEquals("test", l.get("Provider-String"));
+            Assert.assertEquals(0, (Double) l.get("LocationProvider-Number"), 0);
+            Assert.assertEquals(9, (Double) l.get("Accuracy-Number"), 0);
+            Assert.assertEquals(99, (Double) l.get("Bearing-Number"), 0);
+            Assert.assertEquals(66, (Double) l.get("Speed-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getAltitude(), (Double) l.get("Altitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getLatitude(), (Double) l.get("Latitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getLongitude(), (Double) l.get("Longitude-Number"), 0);
+            Assert.assertEquals(testLocations.get(i).getTime(), (Double) l.get("Time-Number"), 0);
+            Assert.assertEquals("bar", l.get("Foo-String"));
+            Assert.assertEquals(111, (Double) l.get("FooNumber-Number"), 0);
+            i++;
+        }
+
+    }
+
+    @Test
+    public void testBatchWithNulls() throws JSONException, IOException {
+
+        BackgroundLocation location = new BackgroundLocation();
+        location.setBatchStartMillis(1000L);
+        location.setStatus(BackgroundLocation.SYNC_PENDING);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        dao.persistLocation(location);
+
+        JSONObject templateJSON = new JSONObject("{\"Nullable\":null, \"NullRadius\": \"@radius\"}");
+        LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
+
+        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        File batchFile = batchManager.createBatch(3000L, 0, template);
+
+        HashMap hashLocation = new HashMap<String, Object>();
+        JsonReader reader = new JsonReader(new FileReader(batchFile));
+        reader.beginArray();
+        while (reader.hasNext()) {
+            reader.beginObject();
+            while(reader.hasNext()) { ;
+                hashLocation.put(reader.nextName(), null);
+                reader.nextNull();
+            }
+            reader.endObject();
+        }
+        reader.endArray();
+
+        Assert.assertTrue(hashLocation.containsKey("Nullable"));
+        Assert.assertTrue(hashLocation.containsKey("NullRadius"));
+    }
+
+    public static String slurp (final File file) throws IOException {
+        StringBuilder result = new StringBuilder();
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            char[] buf = new char[1024];
+            int r = 0;
+            while ((r = reader.read(buf)) != -1) {
+                result.append(buf, 0, r);
+            }
+        }
+        finally {
+            reader.close();
+        }
+
+        return result.toString();
     }
 }
