@@ -99,7 +99,7 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
      */
     public static synchronized SQLiteOpenHelper getHelper(Context context) {
         if (instance == null)
-            instance = new SQLiteOpenHelper(context);
+            instance = new SQLiteOpenHelper(context.getApplicationContext());
 
         return instance;
     }
