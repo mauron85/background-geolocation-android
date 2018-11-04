@@ -11,79 +11,22 @@ import com.marianhello.bgloc.data.sqlite.SQLiteConfigurationContract.Configurati
 
 import java.util.ArrayList;
 
+import static com.marianhello.bgloc.data.sqlite.SQLiteConfigurationContract.ConfigurationEntry.SQL_CREATE_CONFIG_TABLE;
+import static com.marianhello.bgloc.data.sqlite.SQLiteConfigurationContract.ConfigurationEntry.SQL_DROP_CONFIG_TABLE;
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_CREATE_LOCATION_TABLE;
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_CREATE_LOCATION_TABLE_BATCH_ID_IDX;
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_CREATE_LOCATION_TABLE_TIME_IDX;
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_DROP_LOCATION_TABLE;
+
 public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
     private static final String TAG = SQLiteOpenHelper.class.getName();
     public static final String SQLITE_DATABASE_NAME = "cordova_bg_geolocation.db";
     public static final int DATABASE_VERSION = 15;
 
-    private static final String TEXT_TYPE = " TEXT";
-    private static final String INTEGER_TYPE = " INTEGER";
-    private static final String REAL_TYPE = " REAL";
-    private static final String COMMA_SEP = ",";
-
-    private static final String SQL_CREATE_LOCATION_TABLE =
-        "CREATE TABLE " + LocationEntry.TABLE_NAME + " (" +
-        LocationEntry._ID + " INTEGER PRIMARY KEY," +
-        LocationEntry.COLUMN_NAME_TIME + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_ACCURACY + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_SPEED + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_BEARING + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_ALTITUDE + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_LATITUDE + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_LONGITUDE + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_RADIUS + REAL_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_HAS_ACCURACY + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_HAS_SPEED + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_HAS_BEARING + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_HAS_ALTITUDE + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_HAS_RADIUS + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_PROVIDER + TEXT_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_LOCATION_PROVIDER + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_STATUS + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + INTEGER_TYPE + COMMA_SEP +
-        LocationEntry.COLUMN_NAME_MOCK_FLAGS + INTEGER_TYPE +
-        " )";
-
-    private static final String SQL_CREATE_CONFIG_TABLE =
-        "CREATE TABLE " + ConfigurationEntry.TABLE_NAME + " (" +
-        ConfigurationEntry._ID + " INTEGER PRIMARY KEY," +
-        ConfigurationEntry.COLUMN_NAME_RADIUS + REAL_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_DISTANCE_FILTER + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_DESIRED_ACCURACY + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_DEBUG + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIF_TITLE + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIF_TEXT + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIF_ICON_SMALL + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIF_ICON_LARGE + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIF_COLOR + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_STOP_TERMINATE + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_STOP_ON_STILL + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_START_BOOT + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_START_FOREGROUND + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_NOTIFICATIONS_ENABLED + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_LOCATION_PROVIDER + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_INTERVAL + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_FASTEST_INTERVAL + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_ACTIVITIES_INTERVAL + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_URL + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_SYNC_URL + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_SYNC_THRESHOLD + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_HEADERS + TEXT_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_MAX_LOCATIONS + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_TEMPLATE + TEXT_TYPE +
-        " )";
-
-    private static final String SQL_DROP_CONFIG_TABLE =
-            "DROP TABLE IF EXISTS " + ConfigurationEntry.TABLE_NAME;
-
-    private static final String SQL_DROP_LOCATION_TABLE =
-            "DROP TABLE IF EXISTS " + LocationEntry.TABLE_NAME;
-
-    private static final String SQL_CREATE_LOCATION_TABLE_TIME_IDX =
-            "CREATE INDEX time_idx ON " + LocationEntry.TABLE_NAME + " (" + LocationEntry.COLUMN_NAME_TIME + ")";
-
-    private static final String SQL_CREATE_LOCATION_TABLE_BATCH_ID_IDX =
-            "CREATE INDEX batch_id_idx ON " + LocationEntry.TABLE_NAME + " (" + LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + ")";
+    public static final String TEXT_TYPE = " TEXT";
+    public static final String INTEGER_TYPE = " INTEGER";
+    public static final String REAL_TYPE = " REAL";
+    public static final String COMMA_SEP = ",";
 
     private static SQLiteOpenHelper instance;
 
