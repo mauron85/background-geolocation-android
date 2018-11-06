@@ -70,7 +70,8 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
         ConfigurationEntry.COLUMN_NAME_SYNC_THRESHOLD + INTEGER_TYPE + COMMA_SEP +
         ConfigurationEntry.COLUMN_NAME_HEADERS + TEXT_TYPE + COMMA_SEP +
         ConfigurationEntry.COLUMN_NAME_MAX_LOCATIONS + INTEGER_TYPE + COMMA_SEP +
-        ConfigurationEntry.COLUMN_NAME_TEMPLATE + TEXT_TYPE +
+        ConfigurationEntry.COLUMN_NAME_TEMPLATE + TEXT_TYPE + COMMA_SEP +
+        ConfigurationEntry.COLUMN_NAME_APPLY_KALMAN_FILTER + INTEGER_TYPE +
         " )";
 
     private static final String SQL_DROP_CONFIG_TABLE =
