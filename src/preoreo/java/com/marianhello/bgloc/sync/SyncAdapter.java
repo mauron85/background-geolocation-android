@@ -38,7 +38,6 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
 
     private static final int NOTIFICATION_ID = 666;
 
-    ContentResolver contentResolver;
     private ConfigurationDAO configDAO;
     private NotificationManager notificationManager;
     private BatchManager batchManager;
@@ -67,14 +66,9 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         super(context, autoInitialize);
         logger = LoggerManager.getLogger(SyncAdapter.class);
 
-        /*
-         * If your app uses a content resolver, get an instance of it
-         * from the incoming Context
-         */
-        contentResolver = context.getContentResolver();
         configDAO = DAOFactory.createConfigurationDAO(context);
-        batchManager = new BatchManager(this.getContext());
-        notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        batchManager = new BatchManager(context);
+        notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
         NotificationHelper.registerSyncChannel(context);
     }

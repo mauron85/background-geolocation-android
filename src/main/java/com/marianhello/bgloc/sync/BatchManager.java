@@ -57,7 +57,7 @@ public class BatchManager {
     private File createBatchFromTemplate(Long batchStartMillis, Integer syncThreshold, LocationTemplate template) throws IOException {
         logger.info("Creating batch {}", batchStartMillis);
 
-        ContentResolver resolver = context.getApplicationContext().getContentResolver();
+        ContentResolver resolver = context.getContentResolver();
         Uri contentUri = getLocationContentUri();
 
         String whereClause = TextUtils.join("", new String[]{
