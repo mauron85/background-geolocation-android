@@ -58,4 +58,15 @@ public class TextUtils {
         }
         return sb.toString();
     }
+
+    public static String removeLastChar(String str, String lastChar) {
+        if (str == null) {
+            return null;
+        }
+        int indexOfLastChar = str.length() - 1;
+        if (lastChar == null || str.substring(indexOfLastChar).equals(lastChar)) {
+            return str.substring(0, indexOfLastChar);
+        }
+        return str;
+    }
 }

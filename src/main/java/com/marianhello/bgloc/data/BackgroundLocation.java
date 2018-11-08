@@ -1,11 +1,16 @@
 package com.marianhello.bgloc.data;
 
+import android.content.ContentValues;
+import android.database.Cursor;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.v4.util.TimeUtils;
+
+import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
+import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,40 +46,6 @@ public class BackgroundLocation implements Parcelable {
 
     public BackgroundLocation() {}
 
-    public BackgroundLocation(Integer locationProvider, Location location) {
-        this.locationProvider = locationProvider;
-        provider = location.getProvider();
-        latitude = location.getLatitude();
-        longitude = location.getLongitude();
-        time = location.getTime();
-        accuracy = location.getAccuracy();
-        speed = location.getSpeed();
-        bearing = location.getBearing();
-        altitude = location.getAltitude();
-        hasAccuracy = location.hasAccuracy();
-        hasAltitude = location.hasAltitude();
-        hasSpeed = location.hasSpeed();
-        hasBearing = location.hasBearing();
-        extras = location.getExtras();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            elapsedRealtimeNanos = location.getElapsedRealtimeNanos();
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            setIsFromMockProvider(location.isFromMockProvider());
-        }
-    }
-
-    /**
-     * Construct stationary BackgroundLocation.
-     * @param locationProvider
-     * @param location
-     * @param radius radius of stationary region
-     */
-    public BackgroundLocation(Integer locationProvider, Location location, float radius) {
-        this(locationProvider, location);
-        setRadius(radius);
-    }
-
     public BackgroundLocation(String provider) {
         this.provider = provider;
     }
@@ -83,8 +54,27 @@ public class BackgroundLocation implements Parcelable {
      * Construct BackgroundLocation by copying properties from android Location.
      * @param location
      */
+    @Deprecated
     public BackgroundLocation(Location location) {
-        this(null, location);
+        this(BackgroundLocation.fromLocation(location));
+    }
+
+    @Deprecated
+    public BackgroundLocation(Integer locationProvider, Location location) {
+        this(location);
+        this.locationProvider = locationProvider;
+    }
+
+    /**
+     * Construct stationary BackgroundLocation.
+     * @param locationProvider
+     * @param location
+     * @param radius radius of stationary region
+     */
+    @Deprecated
+    public BackgroundLocation(Integer locationProvider, Location location, float radius) {
+        this(locationProvider, location);
+        setRadius(radius);
     }
 
     /**
@@ -115,28 +105,95 @@ public class BackgroundLocation implements Parcelable {
         extras = (l.extras == null) ? null : new Bundle(l.extras);
     }
 
-    private BackgroundLocation(Parcel in) {
-        locationId = in.readLong();
-        locationProvider = in.readInt();
-        batchStartMillis = in.readLong();
-        provider = in.readString();
-        latitude = in.readDouble();
-        longitude = in.readDouble();
-        time = in.readLong();
-        elapsedRealtimeNanos = in.readLong();
-        accuracy = in.readFloat();
-        speed = in.readFloat();
-        bearing = in.readFloat();
-        altitude = in.readDouble();
-        radius = in.readFloat();
-        hasAccuracy = in.readInt() != 0;
-        hasAltitude = in.readInt() != 0;
-        hasSpeed = in.readInt() != 0;
-        hasBearing = in.readInt() != 0;
-        hasRadius = in.readInt() != 0;
-        mockFlags = in.readInt();
-        status = in.readInt();
-        extras = in.readBundle();
+    private static BackgroundLocation fromParcel(Parcel in) {
+        BackgroundLocation l = new BackgroundLocation();
+
+        l.locationId = in.readLong();
+        l.locationProvider = in.readInt();
+        l.batchStartMillis = in.readLong();
+        l.provider = in.readString();
+        l.latitude = in.readDouble();
+        l.longitude = in.readDouble();
+        l.time = in.readLong();
+        l.elapsedRealtimeNanos = in.readLong();
+        l.accuracy = in.readFloat();
+        l.speed = in.readFloat();
+        l.bearing = in.readFloat();
+        l.altitude = in.readDouble();
+        l.radius = in.readFloat();
+        l.hasAccuracy = in.readInt() != 0;
+        l.hasAltitude = in.readInt() != 0;
+        l.hasSpeed = in.readInt() != 0;
+        l.hasBearing = in.readInt() != 0;
+        l.hasRadius = in.readInt() != 0;
+        l.mockFlags = in.readInt();
+        l.status = in.readInt();
+        l.extras = in.readBundle();
+
+        return l;
+    }
+
+    public static BackgroundLocation fromLocation(Location location) {
+        BackgroundLocation l = new BackgroundLocation();
+
+        l.provider = location.getProvider();
+        l.latitude = location.getLatitude();
+        l.longitude = location.getLongitude();
+        l.time = location.getTime();
+        l.accuracy = location.getAccuracy();
+        l.speed = location.getSpeed();
+        l.bearing = location.getBearing();
+        l.altitude = location.getAltitude();
+        l.hasAccuracy = location.hasAccuracy();
+        l.hasAltitude = location.hasAltitude();
+        l.hasSpeed = location.hasSpeed();
+        l.hasBearing = location.hasBearing();
+        l.extras = location.getExtras();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            l.elapsedRealtimeNanos = location.getElapsedRealtimeNanos();
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            l.setIsFromMockProvider(location.isFromMockProvider());
+        }
+
+        return l;
+    }
+
+    /**
+     * Create a new Location from a cursor
+     *
+     * @param c the cursor
+     * @return the note
+     */
+    public static BackgroundLocation fromCursor(Cursor c) {
+        BackgroundLocation l = new BackgroundLocation();
+
+        l.setProvider(c.getString(c.getColumnIndex(LocationEntry.COLUMN_NAME_PROVIDER)));
+        l.setTime(c.getLong(c.getColumnIndex(LocationEntry.COLUMN_NAME_TIME)));
+        if (c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_HAS_ACCURACY)) == 1) {
+            l.setAccuracy(c.getFloat(c.getColumnIndex(LocationEntry.COLUMN_NAME_ACCURACY)));
+        }
+        if (c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_HAS_SPEED)) == 1) {
+            l.setSpeed(c.getFloat(c.getColumnIndex(LocationEntry.COLUMN_NAME_SPEED)));
+        }
+        if (c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_HAS_BEARING)) == 1) {
+            l.setBearing(c.getFloat(c.getColumnIndex(LocationEntry.COLUMN_NAME_BEARING)));
+        }
+        if (c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_HAS_ALTITUDE)) == 1) {
+            l.setAltitude(c.getDouble(c.getColumnIndex(LocationEntry.COLUMN_NAME_ALTITUDE)));
+        }
+        if (c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_HAS_RADIUS)) == 1) {
+            l.setRadius(c.getFloat(c.getColumnIndex(LocationEntry.COLUMN_NAME_RADIUS)));
+        }
+        l.setLatitude(c.getDouble(c.getColumnIndex(LocationEntry.COLUMN_NAME_LATITUDE)));
+        l.setLongitude(c.getDouble(c.getColumnIndex(LocationEntry.COLUMN_NAME_LONGITUDE)));
+        l.setLocationProvider(c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_LOCATION_PROVIDER)));
+        l.setBatchStartMillis(c.getLong(c.getColumnIndex(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS)));
+        l.setStatus(c.getInt(c.getColumnIndex(LocationEntry.COLUMN_NAME_STATUS)));
+        l.setLocationId(c.getLong(c.getColumnIndex(LocationEntry._ID)));
+        l.setMockFlags(c.getInt((c.getColumnIndex(LocationEntry.COLUMN_NAME_MOCK_FLAGS))));
+
+        return l;
     }
 
     @Override
@@ -172,7 +229,7 @@ public class BackgroundLocation implements Parcelable {
     public static final Parcelable.Creator<BackgroundLocation> CREATOR
             = new Parcelable.Creator<BackgroundLocation>() {
         public BackgroundLocation createFromParcel(Parcel in) {
-            return new BackgroundLocation(in);
+            return BackgroundLocation.fromParcel(in);
         }
         public BackgroundLocation[] newArray(int size) {
             return new BackgroundLocation[size];
@@ -814,6 +871,33 @@ public class BackgroundLocation implements Parcelable {
         JSONObject json = toJSONObject();
         json.put("id", locationId);
         return json;
+    }
+
+    /**
+     * Return the contentvalues for this record
+     */
+    public ContentValues toContentValues() {
+        ContentValues values = new ContentValues();
+        //values.put(LocationEntry._ID, locationId);
+        values.put(LocationEntry.COLUMN_NAME_TIME, time);
+        values.put(LocationEntry.COLUMN_NAME_ACCURACY, accuracy);
+        values.put(LocationEntry.COLUMN_NAME_SPEED, speed);
+        values.put(LocationEntry.COLUMN_NAME_BEARING, bearing);
+        values.put(LocationEntry.COLUMN_NAME_ALTITUDE, altitude);
+        values.put(LocationEntry.COLUMN_NAME_LATITUDE, latitude);
+        values.put(LocationEntry.COLUMN_NAME_LONGITUDE, longitude);
+        values.put(LocationEntry.COLUMN_NAME_RADIUS, radius);
+        values.put(LocationEntry.COLUMN_NAME_HAS_ACCURACY, hasAccuracy);
+        values.put(LocationEntry.COLUMN_NAME_HAS_SPEED, hasSpeed);
+        values.put(LocationEntry.COLUMN_NAME_HAS_BEARING, hasBearing);
+        values.put(LocationEntry.COLUMN_NAME_HAS_ALTITUDE, hasAltitude);
+        values.put(LocationEntry.COLUMN_NAME_HAS_RADIUS, hasRadius);
+        values.put(LocationEntry.COLUMN_NAME_PROVIDER, provider);
+        values.put(LocationEntry.COLUMN_NAME_LOCATION_PROVIDER, locationProvider);
+        values.put(LocationEntry.COLUMN_NAME_STATUS, status);
+        values.put(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS, batchStartMillis);
+        values.put(LocationEntry.COLUMN_NAME_MOCK_FLAGS, mockFlags);
+        return values;
     }
 
     public Object getValueForKey(String key) {

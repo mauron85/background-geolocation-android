@@ -9,16 +9,6 @@ import static com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper.REAL_TYPE;
 import static com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper.TEXT_TYPE;
 
 public final class SQLiteLocationContract {
-    /**
-     * The authority of the notes content provider
-     */
-    public static final String AUTHORITY = "com.marianhello.bgloc.data.provider";
-
-    /**
-     * The content URI for the top-level notes authority
-     */
-    public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY);
-
     // To prevent someone from accidentally instantiating the contract class,
     // give it an empty constructor.
     public SQLiteLocationContract() {}
@@ -77,5 +67,40 @@ public final class SQLiteLocationContract {
 
         public static final String SQL_CREATE_LOCATION_TABLE_BATCH_ID_IDX =
                 "CREATE INDEX batch_id_idx ON " + LocationEntry.TABLE_NAME + " (" + LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + ")";
+
+        /**
+         * The directory base-path
+         */
+        public static final String DIR_BASEPATH = "locations";
+
+        /**
+         * The items base-path
+         */
+        public static final String ITEM_BASEPATH = "locations/#";
+
+        /**
+         * A projection of all columns in the items table
+         */
+        public static final String[] PROJECTION_ALL = {
+                _ID,
+                COLUMN_NAME_TIME,
+                COLUMN_NAME_ACCURACY,
+                COLUMN_NAME_SPEED,
+                COLUMN_NAME_BEARING,
+                COLUMN_NAME_ALTITUDE,
+                COLUMN_NAME_LATITUDE,
+                COLUMN_NAME_LONGITUDE,
+                COLUMN_NAME_RADIUS,
+                COLUMN_NAME_HAS_ACCURACY,
+                COLUMN_NAME_HAS_SPEED,
+                COLUMN_NAME_HAS_BEARING,
+                COLUMN_NAME_HAS_ALTITUDE,
+                COLUMN_NAME_HAS_RADIUS,
+                COLUMN_NAME_PROVIDER,
+                COLUMN_NAME_LOCATION_PROVIDER,
+                COLUMN_NAME_STATUS,
+                COLUMN_NAME_BATCH_START_MILLIS,
+                COLUMN_NAME_MOCK_FLAGS
+        };
     }
 }
