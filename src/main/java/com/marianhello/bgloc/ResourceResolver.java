@@ -1,14 +1,13 @@
 package com.marianhello.bgloc;
 
 import android.content.Context;
-import android.net.Uri;
 
 /**
  * Created by finch on 19/07/16.
  */
 public class ResourceResolver {
 
-    private static final String ACCOUNT_NAME = "dummy";
+    private static final String ACCOUNT_NAME_RESOURCE = "account_name";
     private static final String ACCOUNT_TYPE_RESOURCE = "account_type";
     private static final String AUTHORITY_TYPE_RESOURCE = "content_authority";
 
@@ -38,7 +37,7 @@ public class ResourceResolver {
     }
 
     public String getAccountName() {
-        return ACCOUNT_NAME;
+        return getString(ACCOUNT_NAME_RESOURCE);
     }
 
     public String getAccountType() {
