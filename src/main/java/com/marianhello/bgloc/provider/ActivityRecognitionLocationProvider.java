@@ -18,10 +18,9 @@ import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.data.DAOFactory;
-import com.marianhello.bgloc.data.ConfigurationDAO;
+import com.marianhello.bgloc.data.BackgroundActivity;
+
 
 import org.json.JSONException;
 import java.util.ArrayList;
@@ -29,20 +28,10 @@ import java.util.ArrayList;
 public class ActivityRecognitionLocationProvider extends AbstractLocationProvider implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
-    private Tracker1D mLatitudeTracker, mLongitudeTracker, mAltitudeTracker;
-    private boolean mPredicted;
-    private static final double DEG_TO_METER = 111225.0;
-    private static final double METER_TO_DEG = 1.0 / DEG_TO_METER;
-    private static final double TIME_STEP = 1.0;
-    private static final double COORDINATE_NOISE = 4.0 * METER_TO_DEG;
-    private static final double ALTITUDE_NOISE = 10.0;
-
     private static final String TAG = ActivityRecognitionLocationProvider.class.getSimpleName();
     private static final String P_NAME = " com.marianhello.bgloc";
     private static final String DETECTED_ACTIVITY_UPDATE = P_NAME + ".DETECTED_ACTIVITY_UPDATE";
 
-    private ConfigurationDAO configDAO;
-    private Config config;
     private GoogleApiClient googleApiClient;
     private PendingIntent detectedActivitiesPI;
 
@@ -54,13 +43,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
 
     public ActivityRecognitionLocationProvider(Context context) {
         super(context);
-        configDAO = DAOFactory.createConfigurationDAO(context);
-        config = null;
-        try {
-          config = configDAO.retrieveConfiguration();
-        } catch (JSONException e) {
-          logger.error("Error retrieving config: {}", e.getMessage());
-        }
         PROVIDER_ID = Config.ACTIVITY_PROVIDER;
     }
 
@@ -105,7 +87,7 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     public void onLocationChanged(Location location) {
         logger.debug("Location change: {}", location.toString());
         Location currentLocation = location;
-        if(config.getApplyKalmanFilter()) {
+        if(mConfig.getApplyKalmanFilter()) {
             currentLocation = applyKalmanFilter(location);
         }
 
@@ -119,91 +101,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
 
         lastLocation = currentLocation;
         handleLocation(currentLocation);
-    }
-
-    private Location applyKalmanFilter(Location location) {
-        final double accuracy = location.getAccuracy();
-        double position, noise;
-
-        // Latitude
-        position = location.getLatitude();
-        noise = accuracy * METER_TO_DEG;
-        if (mLatitudeTracker == null) {
-            mLatitudeTracker = new Tracker1D(TIME_STEP, COORDINATE_NOISE);
-            mLatitudeTracker.setState(position, 0.0, noise);
-        }
-
-        if (!mPredicted)
-            mLatitudeTracker.predict(0.0);
-
-        mLatitudeTracker.update(position, noise);
-
-        // Longitude
-        position = location.getLongitude();
-        noise = accuracy * Math.cos(Math.toRadians(location.getLatitude())) * METER_TO_DEG ;
-
-        if (mLongitudeTracker == null) {
-
-            mLongitudeTracker = new Tracker1D(TIME_STEP, COORDINATE_NOISE);
-            mLongitudeTracker.setState(position, 0.0, noise);
-        }
-
-        if (!mPredicted)
-            mLongitudeTracker.predict(0.0);
-
-        mLongitudeTracker.update(position, noise);
-
-        // Altitude
-        if (location.hasAltitude()) {
-
-            position = location.getAltitude();
-            noise = accuracy;
-
-            if (mAltitudeTracker == null) {
-
-                mAltitudeTracker = new Tracker1D(TIME_STEP, ALTITUDE_NOISE);
-                mAltitudeTracker.setState(position, 0.0, noise);
-            }
-
-            if (!mPredicted)
-                mAltitudeTracker.predict(0.0);
-
-            mAltitudeTracker.update(position, noise);
-        }
-
-        // Reset predicted flag
-        mPredicted = false;
-
-        // Latitude
-        mLatitudeTracker.predict(0.0);
-        location.setLatitude(mLatitudeTracker.getPosition());
-
-        // Longitude
-        mLongitudeTracker.predict(0.0);
-        location.setLongitude(mLongitudeTracker.getPosition());
-
-        // Altitude
-        if (lastLocation != null && lastLocation.hasAltitude()) {
-            mAltitudeTracker.predict(0.0);
-            location.setAltitude(mAltitudeTracker.getPosition());
-        }
-
-        // Speed
-        if (lastLocation != null && lastLocation.hasSpeed())
-            location.setSpeed(lastLocation.getSpeed());
-
-        // Bearing
-        if (lastLocation != null && lastLocation.hasBearing())
-            location.setBearing(lastLocation.getBearing());
-
-        // Accuracy (always has)
-        location.setAccuracy((float) (mLatitudeTracker.getAccuracy() * DEG_TO_METER));
-
-        // Set times
-        location.setTime(System.currentTimeMillis());
-
-        logger.debug("Location after applying kalman filter: {}", location.toString());
-        return  location;
     }
 
     public void startTracking() {
