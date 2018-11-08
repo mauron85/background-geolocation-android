@@ -21,8 +21,6 @@ import com.google.android.gms.location.LocationServices;
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.data.BackgroundActivity;
 
-
-import org.json.JSONException;
 import java.util.ArrayList;
 
 public class ActivityRecognitionLocationProvider extends AbstractLocationProvider implements GoogleApiClient.ConnectionCallbacks,
