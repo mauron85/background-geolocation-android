@@ -493,9 +493,9 @@ public class BackgroundGeolocationFacade {
     public void forceSync() {
         logger.debug("Sync locations forced");
         ResourceResolver resolver = ResourceResolver.newInstance(getContext());
-        Account syncAccount = AccountHelper.CreateSyncAccount(getContext(), SyncService.ACCOUNT_NAME,
-                resolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
-        SyncService.sync(syncAccount, resolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), true);
+        Account syncAccount = AccountHelper.CreateSyncAccount(getContext(), resolver.getAccountName(),
+                resolver.getAccountType());
+        SyncService.sync(syncAccount, resolver.getAuthority(), true);
     }
 
     public int getAuthorizationStatus() {

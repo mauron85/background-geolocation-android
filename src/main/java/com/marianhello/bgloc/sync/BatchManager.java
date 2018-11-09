@@ -1,19 +1,25 @@
 package com.marianhello.bgloc.sync;
 
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.util.JsonWriter;
 
+import com.marianhello.bgloc.ResourceResolver;
 import com.marianhello.bgloc.data.AbstractLocationTemplate;
 import com.marianhello.bgloc.data.ArrayListLocationTemplate;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
+import com.marianhello.bgloc.data.provider.LocationContentProvider;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
+import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
 import com.marianhello.logging.LoggerManager;
 
@@ -25,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,59 +48,39 @@ public class BatchManager {
         this.context = context;
     }
 
+    private Uri getLocationContentUri() {
+        ResourceResolver resourceResolver = ResourceResolver.newInstance(context);
+        String authority = resourceResolver.getAuthority();
+        return LocationContentProvider.getContentUri(authority);
+    }
+
     private File createBatchFromTemplate(Long batchStartMillis, Integer syncThreshold, LocationTemplate template) throws IOException {
         logger.info("Creating batch {}", batchStartMillis);
 
-        SQLiteOpenHelper helper = SQLiteOpenHelper.getHelper(context);
-        SQLiteDatabase db = helper.getWritableDatabase();
-
-        String[] columns = {
-                SQLiteLocationContract.LocationEntry._ID,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_PROVIDER,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_LATITUDE,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_LONGITUDE,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_ACCURACY,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_SPEED,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_BEARING,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_ALTITUDE,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_RADIUS,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ACCURACY,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_SPEED,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_BEARING,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ALTITUDE,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER,
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS
-        };
+        ContentResolver resolver = context.getContentResolver();
+        Uri contentUri = getLocationContentUri();
 
         String whereClause = TextUtils.join("", new String[]{
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS + " = ? AND ( ",
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " IS NULL OR ",
-                SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " < ? )",
+                LocationEntry.COLUMN_NAME_STATUS + " = ? AND ( ",
+                LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " IS NULL OR ",
+                LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " < ? )",
         });
         String[] whereArgs = {
                 String.valueOf(BackgroundLocation.SYNC_PENDING),
                 String.valueOf(batchStartMillis)
         };
-        String groupBy = null;
-        String having = null;
-        String orderBy = SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME + " ASC";
 
         Cursor cursor = null;
         LocationWriter writer = null;
 
         try {
-            db.beginTransactionNonExclusive();
+            cursor = resolver.query(
+                    contentUri,
+                    null,
+                    whereClause,
+                    whereArgs,
+                    LocationEntry.COLUMN_NAME_TIME + " ASC"
 
-            cursor = db.query(
-                    SQLiteLocationContract.LocationEntry.TABLE_NAME,  // The table to query
-                    columns,                   // The columns to return
-                    whereClause,               // The columns for the WHERE clause
-                    whereArgs,                 // The values for the WHERE clause
-                    groupBy,                   // don't group the rows
-                    having,                    // don't filter by row groups
-                    orderBy                    // The sort order
             );
 
             if (cursor.getCount() < syncThreshold) {
@@ -106,49 +93,7 @@ public class BatchManager {
 
             writer.beginArray();
             while (cursor.moveToNext()) {
-                long locationId = cursor.getLong(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry._ID));
-                int locationProvider = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LOCATION_PROVIDER));
-                String provider = cursor.getString(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_PROVIDER));
-                double latitude = cursor.getDouble(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LATITUDE));
-                double longitude = cursor.getDouble(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_LONGITUDE));
-                long time = cursor.getLong(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_TIME));
-                float accuracy = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_ACCURACY));
-                float speed = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_SPEED));
-                float bearing = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_BEARING));
-                double altitude = cursor.getDouble(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_ALTITUDE));
-                float radius = cursor.getFloat(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_RADIUS));
-                boolean hasAccuracy = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ACCURACY)) == 1;
-                boolean hasAltitude = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_ALTITUDE)) == 1;
-                boolean hasSpeed = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_SPEED)) == 1;
-                boolean hasBearing = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_BEARING)) == 1;
-                boolean hasRadius = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_HAS_RADIUS)) == 1;
-                int mockFlags = cursor.getInt(cursor.getColumnIndex(SQLiteLocationContract.LocationEntry.COLUMN_NAME_MOCK_FLAGS));
-
-                BackgroundLocation location = new BackgroundLocation();
-                location.setLocationId(locationId);
-                location.setLocationProvider(locationProvider);
-                location.setProvider(provider);
-                location.setLatitude(latitude);
-                location.setLongitude(longitude);
-                location.setTime(time);
-                if (hasAccuracy) {
-                    location.setAccuracy(accuracy);
-                }
-                if (hasAltitude) {
-                    location.setAltitude(altitude);
-                }
-                if (hasSpeed) {
-                    location.setSpeed(speed);
-                }
-                if (hasBearing) {
-                    location.setBearing(bearing);
-                }
-                if (hasRadius) {
-                    location.setRadius(radius);
-                }
-                location.setMockFlags(mockFlags);
-
-
+                BackgroundLocation location = BackgroundLocation.fromCursor(cursor);
                 writer.write(location);
             }
 
@@ -158,17 +103,13 @@ public class BatchManager {
 
             // set batchStartMillis for all synced locations
             ContentValues values = new ContentValues();
-            values.put(SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS, batchStartMillis);
-            db.update(SQLiteLocationContract.LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
-
-            db.setTransactionSuccessful();
+            values.put(LocationEntry.COLUMN_NAME_BATCH_START_MILLIS, batchStartMillis);
+            resolver.update(contentUri, values, whereClause, whereArgs);
 
             logger.info("Batch file: {} created successfully", file.getName());
 
             return file;
         } finally {
-            db.endTransaction();
-
             if (cursor != null) {
                 cursor.close();
             }
@@ -194,15 +135,15 @@ public class BatchManager {
 
 
     public void setBatchCompleted(Long batchId) {
-        SQLiteOpenHelper helper = SQLiteOpenHelper.getHelper(context);
-        SQLiteDatabase db = helper.getWritableDatabase();
+        ContentResolver resolver = context.getApplicationContext().getContentResolver();
+        Uri contentUri = getLocationContentUri();
 
-        String whereClause = SQLiteLocationContract.LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " = ?";
+        String whereClause = LocationEntry.COLUMN_NAME_BATCH_START_MILLIS + " = ?";
         String[] whereArgs = { String.valueOf(batchId) };
 
         ContentValues values = new ContentValues();
-        values.put(SQLiteLocationContract.LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.DELETED);
-        db.update(SQLiteLocationContract.LocationEntry.TABLE_NAME, values, whereClause, whereArgs);
+        values.put(LocationEntry.COLUMN_NAME_STATUS, BackgroundLocation.DELETED);
+        resolver.update(contentUri, values, whereClause, whereArgs);
     }
 
     private static class LocationTemplateWriter {

@@ -13,7 +13,6 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.HashMapLocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplate;
 import com.marianhello.bgloc.data.LocationTemplateFactory;
-import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
 import com.marianhello.bgloc.sync.BatchManager;
@@ -35,20 +34,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_DROP_LOCATION_TABLE;
+
 /**
  * Created by finch on 22/07/16.
  */
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class BatchManagerTest {
-    SQLiteDatabase db;
+    Context mContext;
+    SQLiteOpenHelper mDbHelper;
+
+    public void prepareDatabase() {
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        mDbHelper.execAndLogSql(db, SQL_DROP_LOCATION_TABLE);
+        mDbHelper.onCreate(db);
+    }
 
     @Before
-    public void prepareDatabase() {
-        Context context = InstrumentationRegistry.getTargetContext();
-        SQLiteOpenHelper helper = SQLiteOpenHelper.getHelper(context);
-        db = helper.getWritableDatabase();
-        db.delete(SQLiteLocationContract.LocationEntry.TABLE_NAME, null, null);
+    public void setUp() {
+        mContext = InstrumentationRegistry.getTargetContext();
+        mDbHelper = SQLiteOpenHelper.getHelper(mContext);
+        prepareDatabase();
     }
 
     private List<BackgroundLocation> readLocationsArray(JsonReader reader) throws IOException {
@@ -99,7 +106,7 @@ public class BatchManagerTest {
 
     @Test
     public void testCreateBatch() {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
 
         int i = 1;
         for (int j = i; j < 100; j++) {
@@ -127,7 +134,7 @@ public class BatchManagerTest {
         }
 
         List<BackgroundLocation> locations = null;
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
         try {
             File batchFile = batchManager.createBatch(1000L, 0);
             JsonReader reader = new JsonReader(new FileReader(batchFile));
@@ -153,7 +160,7 @@ public class BatchManagerTest {
 
     @Test
     public void testCreateBatchWithArrayListTemplate() {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
 
         for (int i = 1; i < 3; i++) {
             BackgroundLocation location = new BackgroundLocation();
@@ -179,7 +186,7 @@ public class BatchManagerTest {
         LocationTemplate template = new ArrayListLocationTemplate(list);
 
         ArrayList<HashMap> locations = new ArrayList();
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
 
         try {
             File batchFile = batchManager.createBatch(3000L, 0, template);
@@ -218,7 +225,7 @@ public class BatchManagerTest {
 
     @Test
     public void testCreateBatchWithMapHashTemplate() {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
 
         for (int i = 1; i < 3; i++) {
             BackgroundLocation location = new BackgroundLocation();
@@ -242,7 +249,7 @@ public class BatchManagerTest {
         LocationTemplate template = new HashMapLocationTemplate(map);
 
         ArrayList<HashMap> locations = new ArrayList();
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
 
         try {
             File batchFile = batchManager.createBatch(3000L, 0, template);
@@ -290,7 +297,7 @@ public class BatchManagerTest {
 
     @Test
     public void testSetBatchCompleted() {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
 
         int i = 1;
         BackgroundLocation location;
@@ -322,7 +329,7 @@ public class BatchManagerTest {
         Assert.assertEquals(99, dao.getAllLocations().size());
         Assert.assertEquals(50, dao.getValidLocations().size());
         Assert.assertEquals(49, dao.getLocationsForSyncCount(1000L));
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
         try {
             batchManager.createBatch(1000L, 0);
             batchManager.setBatchCompleted(1000L);
@@ -335,7 +342,7 @@ public class BatchManagerTest {
 
     @Test
     public void testCreateBatchWithNestedTemplate() throws JSONException, IOException {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
         ArrayList<BackgroundLocation> testLocations = new ArrayList<BackgroundLocation>();
 
         for (int i = 0; i < 3; i++) {
@@ -373,7 +380,7 @@ public class BatchManagerTest {
         );
         LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
 
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
         File batchFile = batchManager.createBatch(3000L, 0, template);
 
         ArrayList<HashMap<String, Object>> hashLocations = new ArrayList();
@@ -423,7 +430,7 @@ public class BatchManagerTest {
 
     @Test
     public void testCreateBatchWithNestedListTemplate() throws JSONException, IOException {
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
         ArrayList<BackgroundLocation> testLocations = new ArrayList<BackgroundLocation>();
 
         for (int i = 0; i < 3; i++) {
@@ -461,7 +468,7 @@ public class BatchManagerTest {
                         "}]"
         );
         LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
         File batchFile = batchManager.createBatch(3000L, 0, template);
 
         ArrayList<HashMap<String, Object>> hashLocations = new ArrayList();
@@ -517,13 +524,13 @@ public class BatchManagerTest {
         BackgroundLocation location = new BackgroundLocation();
         location.setBatchStartMillis(1000L);
         location.setStatus(BackgroundLocation.SYNC_PENDING);
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+        SQLiteLocationDAO dao = new SQLiteLocationDAO(mDbHelper.getWritableDatabase());
         dao.persistLocation(location);
 
         JSONObject templateJSON = new JSONObject("{\"Nullable\":null, \"NullRadius\": \"@radius\"}");
         LocationTemplate template = LocationTemplateFactory.fromJSON(templateJSON);
 
-        BatchManager batchManager = new BatchManager(InstrumentationRegistry.getTargetContext());
+        BatchManager batchManager = new BatchManager(mContext);
         File batchFile = batchManager.createBatch(3000L, 0, template);
 
         HashMap hashLocation = new HashMap<String, Object>();

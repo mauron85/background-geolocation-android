@@ -204,10 +204,10 @@ public class LocationService extends Service implements ProviderDelegate {
                 handleHttpAuthorizationUpdates();
             }
         });
-        mSyncAccount = AccountHelper.CreateSyncAccount(this, SyncService.ACCOUNT_NAME,
-                mResolver.getString(SyncService.ACCOUNT_TYPE_RESOURCE));
+        mSyncAccount = AccountHelper.CreateSyncAccount(this, mResolver.getAccountName(),
+                mResolver.getAccountType());
 
-        String authority = mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE);
+        String authority = mResolver.getAuthority();
         ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
         ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
 
@@ -598,7 +598,7 @@ public class LocationService extends Service implements ProviderDelegate {
                         long syncLocationsCount = mLocationDAO.getLocationsForSyncCount(System.currentTimeMillis());
                         if (syncLocationsCount >= config.getSyncThreshold()) {
                             logger.debug("Attempt to sync locations: {} threshold: {}", syncLocationsCount, config.getSyncThreshold());
-                            SyncService.sync(mSyncAccount, mResolver.getString(SyncService.AUTHORITY_TYPE_RESOURCE), false);
+                            SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
                         }
                     }
                 }

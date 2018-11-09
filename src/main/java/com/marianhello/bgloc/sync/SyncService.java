@@ -13,10 +13,6 @@ import android.os.IBinder;
  * onPerformSync().
  */
 public class SyncService extends Service {
-    public static final String ACCOUNT_NAME = "dummy";
-    public static final String ACCOUNT_TYPE_RESOURCE = "account_type";
-    public static final String AUTHORITY_TYPE_RESOURCE = "content_authority";
-
     // Storage for an instance of the sync adapter
     private static SyncAdapter sSyncAdapter = null;
     // Object to use as a thread-safe lock
