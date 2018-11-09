@@ -26,6 +26,7 @@ import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.utils.Tone;
+import com.kalmanFilters.Tracker1D;
 
 /**
  * AbstractLocationProvider
