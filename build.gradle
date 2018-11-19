@@ -2,9 +2,8 @@ apply plugin: 'com.android.library'
 
 apply from: './VERSIONS.gradle'
 def applicationId = getApplicationId()
-def playServicesVersion = getPlayServicesVersion()
-def supportLibVersion = getSupportLibVersion()
 def hasGradle3Support = getGradle3Support()
+def resourcePrefix = getResourcePrefix()
 
 // https://hackernoon.com/android-how-to-add-gradle-dependencies-using-foreach-c4cbcc070458
 def oreoDependencies = [
@@ -66,8 +65,9 @@ android {
     publishNonDefault true
 
     defaultConfig {
-        resValue "string", "content_authority", applicationId + '.provider'
-        resValue "string", "account_type", applicationId
+        resValue "string", resourcePrefix + "account_name", 'Locations'
+        resValue "string", resourcePrefix + "account_type", applicationId + '.mauron85.bgloc.account'
+        resValue "string", resourcePrefix + "content_authority", applicationId + '.mauron85.bgloc.provider'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         minSdkVersion project.ext.getMinSdkVersion()
         versionCode 1

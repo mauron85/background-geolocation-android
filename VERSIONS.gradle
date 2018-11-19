@@ -13,6 +13,7 @@ def ROBOLECTRIC_VERSION = "3.0"
 def JUNIT_VERSION = "4.12"
 def FEST_ASSERT_CORE_VERSION = "2.0M10"
 def SUPPORT_TEST_VERSION = "0.5"
+def RESOURCE_PREFIX = "mauron85_bgloc_"
 
 ext {
     hasRootProject = { ->
@@ -110,6 +111,10 @@ ext {
             return true
         }
         return false
+    }
+
+    getResourcePrefix = { ->
+        return RESOURCE_PREFIX
     }
 
     androidLibs = [
