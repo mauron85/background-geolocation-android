@@ -18,7 +18,6 @@ import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.HttpPostService;
 import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.NotificationHelper;
-import com.marianhello.bgloc.UploadingCallback;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.logging.LoggerManager;
@@ -33,7 +32,7 @@ import java.util.HashMap;
  * Handle the transfer of data between a server and an
  * app, using the Android sync adapter framework.
  */
-public class SyncAdapter extends AbstractThreadedSyncAdapter implements UploadingCallback {
+public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPostService.UploadingProgressListener {
 
     private static final int NOTIFICATION_ID = 666;
 
@@ -155,7 +154,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         }
 
         try {
-            int responseCode = HttpPostService.postFile(url, file, httpHeaders, this);
+            int responseCode = HttpPostService.postJSONFile(url, file, httpHeaders, this);
 
             // All 2xx statuses are okay
             boolean isStatusOkay = responseCode >= 200 && responseCode < 300;
@@ -213,7 +212,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements Uploadin
         return false;
     }
 
-    public void uploadListener(int progress) {
+    public void onProgress(int progress) {
         logger.debug("Syncing progress: {} updatedAt: {}", progress, System.currentTimeMillis());
 
         if (notificationsEnabled) {

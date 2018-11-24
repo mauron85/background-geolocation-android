@@ -12,6 +12,8 @@ def oreoDependencies = [
     [configuration: "androidTestImplementation", dependency: testLibs.testRules],
     [configuration: "testImplementation", dependency: testLibs.junit],
     [configuration: "testImplementation", dependency: testLibs.json],
+    [configuration: "testImplementation", dependency: testLibs.robolectric],
+    [configuration: "testImplementation", dependency: testLibs.mockitoCore],
     [configuration: "implementation", dependency: androidLibs.playServicesLocation],
     [configuration: "implementation", dependency: androidLibs.supportCompat],
     [configuration: "implementation", dependency: androidLibs.appcompat],
@@ -28,6 +30,8 @@ def preoreoDependencies = [
     [configuration: "androidTestCompile", dependency: testLibs.testRules],
     [configuration: "testCompile", dependency: testLibs.junit],
     [configuration: "testCompile", dependency: testLibs.json],
+    [configuration: "testCompile", dependency: testLibs.robolectric],
+    [configuration: "testCompile", dependency: testLibs.mockitoCore],
     [configuration: "compile", dependency: androidLibs.playServicesLocation],
     [configuration: "oreoCompile", dependency: androidLibs.supportCompat],
     [configuration: "compile", dependency: androidLibs.appcompat],
@@ -111,6 +115,7 @@ android {
     }
 
     testOptions {
+        //unitTests.includeAndroidResources = true
         unitTests.returnDefaultValues = true
     }
 

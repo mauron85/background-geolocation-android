@@ -53,12 +53,7 @@ import com.marianhello.logging.LoggerManager;
 import com.marianhello.logging.UncaughtExceptionLogger;
 
 import org.chromium.content.browser.ThreadUtils;
-import org.json.JSONArray;
 import org.json.JSONException;
-
-import java.net.HttpURLConnection;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class LocationService extends Service implements ProviderDelegate {
 
@@ -105,11 +100,9 @@ public class LocationService extends Service implements ProviderDelegate {
     private static int NOTIFICATION_ID = 1;
 
     private ResourceResolver mResolver;
-    private LocationDAO mLocationDAO;
     private Config mConfig;
     private LocationProvider mProvider;
     private Account mSyncAccount;
-    private boolean mHasConnectivity = true;
     private boolean mIsBound = false;
 
     private org.slf4j.Logger logger;
@@ -192,8 +185,16 @@ public class LocationService extends Service implements ProviderDelegate {
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
 
         mResolver = ResourceResolver.newInstance(this);
-        mLocationDAO = (DAOFactory.createLocationDAO(this));
-        mPostLocationTask = new PostLocationTask(mLocationDAO, new PostLocationTaskListener() {
+
+        mSyncAccount = AccountHelper.CreateSyncAccount(this, mResolver.getAccountName(),
+                mResolver.getAccountType());
+
+        String authority = mResolver.getAuthority();
+        ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
+        ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
+
+        mPostLocationTask = new PostLocationTask((DAOFactory.createLocationDAO(this)),
+                new PostLocationTask.PostLocationTaskListener() {
             @Override
             public void onRequestedAbortUpdates() {
                 handleRequestedAbortUpdates();
@@ -203,13 +204,17 @@ public class LocationService extends Service implements ProviderDelegate {
             public void onHttpAuthorizationUpdates() {
                 handleHttpAuthorizationUpdates();
             }
-        });
-        mSyncAccount = AccountHelper.CreateSyncAccount(this, mResolver.getAccountName(),
-                mResolver.getAccountType());
 
-        String authority = mResolver.getAuthority();
-        ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
-        ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
+            @Override
+            public void onSyncRequested() {
+                SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
+            }
+        }, new ConnectivityListener() {
+            @Override
+            public boolean hasConnectivity() {
+                return isNetworkAvailable();
+            }
+        });
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         NotificationHelper.registerServiceChannel(this);
@@ -261,6 +266,9 @@ public class LocationService extends Service implements ProviderDelegate {
         }
 
         logger.debug("Will start service with: {}", mConfig.toString());
+
+        mPostLocationTask.setConfig(mConfig);
+        mPostLocationTask.clearQueue();
 
         LocationProviderFactory spf = new LocationProviderFactory(this);
         mProvider = spf.getInstance(mConfig.getLocationProvider());
@@ -337,6 +345,8 @@ public class LocationService extends Service implements ProviderDelegate {
         final Config currentConfig = mConfig;
         mConfig = config;
 
+        mPostLocationTask.setConfig(mConfig);
+
         ThreadUtils.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -391,8 +401,6 @@ public class LocationService extends Service implements ProviderDelegate {
     public void onLocation(BackgroundLocation location) {
         logger.debug("New location {}", location.toString());
 
-        mPostLocationTask.add(location);
-
         Bundle bundle = new Bundle();
         bundle.putInt("action", MSG_ON_LOCATION);
         bundle.putParcelable("payload", location);
@@ -409,12 +417,12 @@ public class LocationService extends Service implements ProviderDelegate {
                 logger.debug("Location task result: {}", value);
             }
         });
+
+        handleLocation(location);
     }
 
     public void onStationary(BackgroundLocation location) {
         logger.debug("New stationary {}", location.toString());
-
-        mPostLocationTask.add(location);
 
         Bundle bundle = new Bundle();
         bundle.putInt("action", MSG_ON_STATIONARY);
@@ -432,6 +440,8 @@ public class LocationService extends Service implements ProviderDelegate {
                 logger.debug("Stationary task result: {}", value);
             }
         });
+
+        handleLocation(location);
     }
 
     public void onActivity(BackgroundActivity activity) {
@@ -462,7 +472,7 @@ public class LocationService extends Service implements ProviderDelegate {
         broadcastMessage(bundle);
     }
 
-    public void broadcastMessage(Bundle bundle) {
+    private void broadcastMessage(Bundle bundle) {
         Intent intent = new Intent(ACTION_BROADCAST);
         intent.putExtras(bundle);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
@@ -491,7 +501,7 @@ public class LocationService extends Service implements ProviderDelegate {
         super.unregisterReceiver(receiver);
     }
 
-    public Config getConfig() {
+    private Config getConfig() {
         Config config = mConfig;
         if (config == null) {
             ConfigurationDAO dao = DAOFactory.createConfigurationDAO(this);
@@ -534,124 +544,17 @@ public class LocationService extends Service implements ProviderDelegate {
         }
     }
 
-    /**
-     * Location task to post/sync locations from location providers
-     *
-     * All locations updates are recorded in local db at all times.
-     * Also location is also send to all messenger clients.
-     *
-     * If option.url is defined, each location is also immediately posted.
-     * If post is successful, the location is deleted from local db.
-     * All failed to post locations are coalesced and send in some time later in one single batch.
-     * Batch sync takes place only when number of failed to post locations reaches syncTreshold.
-     *
-     * If only option.syncUrl is defined, locations are send only in single batch,
-     * when number of locations reaches syncTreshold.
-     *
-     */
-    private class PostLocationTask {
-        private final ExecutorService mExecutor;
-        private final LocationDAO mLocationDAO;
-        private final PostLocationTaskListener mListener;
+    private void handleLocation(BackgroundLocation location) {
+        if (mLocationTransform != null) {
+            location = mLocationTransform.transformLocationBeforeCommit(LocationService.this, location);
 
-        public PostLocationTask(LocationDAO dao, PostLocationTaskListener listener) {
-            mLocationDAO = dao;
-            mExecutor = Executors.newSingleThreadExecutor();
-            mListener = listener;
+            if (location == null) {
+                logger.debug("Skipping coordinate as requested by the locationTransform");
+                return;
+            }
         }
 
-        public void shutdown() {
-            mExecutor.shutdown();
-        }
-
-        public void add(final BackgroundLocation inLocation) {
-            mExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    long locationId;
-                    Config config = getConfig();
-
-                    BackgroundLocation location = inLocation;
-
-                    if (mLocationTransform != null) {
-                        location = mLocationTransform.transformLocationBeforeCommit(LocationService.this, location);
-
-                        if (location == null) {
-                            logger.debug("Skipping coordinate as requested by the locationTransform");
-                            return;
-                        }
-                    }
-
-                    if (mHasConnectivity && config.hasValidUrl()) {
-                        locationId = mLocationDAO.persistLocation(location, config.getMaxLocations());
-                        if (postLocation(location)) {
-                            mLocationDAO.deleteLocationById(locationId);
-                            return;
-                        } else {
-                            mLocationDAO.updateLocationForSync(locationId);
-                        }
-                    } else {
-                        mLocationDAO.persistLocationForSync(location, config.getMaxLocations());
-                    }
-
-                    if (config.hasValidSyncUrl()) {
-                        long syncLocationsCount = mLocationDAO.getLocationsForSyncCount(System.currentTimeMillis());
-                        if (syncLocationsCount >= config.getSyncThreshold()) {
-                            logger.debug("Attempt to sync locations: {} threshold: {}", syncLocationsCount, config.getSyncThreshold());
-                            SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
-                        }
-                    }
-                }
-            });
-        }
-
-        private boolean postLocation(BackgroundLocation location) {
-            logger.debug("Executing PostLocationTask#postLocation");
-            JSONArray jsonLocations = new JSONArray();
-            Config config = getConfig();
-            try {
-                jsonLocations.put(config.getTemplate().locationToJson(location));
-            } catch (JSONException e) {
-                logger.warn("Location to json failed: {}", location.toString());
-                return false;
-            }
-
-            String url = config.getUrl();
-            logger.debug("Posting json to url: {} headers: {}", url, config.getHttpHeaders());
-            int responseCode;
-
-            try {
-                responseCode = HttpPostService.postJSON(url, jsonLocations, config.getHttpHeaders());
-            } catch (Exception e) {
-                mHasConnectivity = isNetworkAvailable();
-                logger.warn("Error while posting locations: {}", e.getMessage());
-                return false;
-            }
-
-            if (responseCode == 285) {
-                // Okay, but we don't need to continue sending these
-
-                logger.debug("Location was sent to the server, and received an \"HTTP 285 Updates Not Required\"");
-
-                if (mListener != null)
-                    mListener.onRequestedAbortUpdates();
-            }
-
-            if (responseCode == 401) {
-                if (mListener != null)
-                    mListener.onHttpAuthorizationUpdates();
-            }
-
-            // All 2xx statuses are okay
-            boolean isStatusOkay = responseCode >= 200 && responseCode < 300;
-
-            if (!isStatusOkay) {
-                logger.warn("Server error while posting locations responseCode: {}", responseCode);
-                return false;
-            }
-
-            return true;
-        }
+        mPostLocationTask.add(location);
     }
 
     public void handleRequestedAbortUpdates() {
@@ -672,8 +575,9 @@ public class LocationService extends Service implements ProviderDelegate {
     private BroadcastReceiver connectivityChangeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            mHasConnectivity = isNetworkAvailable();
-            logger.info("Network condition changed has connectivity: {}", mHasConnectivity);
+            boolean hasConnectivity = isNetworkAvailable();
+            mPostLocationTask.setHasConnectivity(hasConnectivity);
+            logger.info("Network condition changed has connectivity: {}", hasConnectivity);
         }
     };
 
@@ -718,12 +622,5 @@ public class LocationService extends Service implements ProviderDelegate {
          */
 
         @Nullable BackgroundLocation transformLocationBeforeCommit(@NonNull Context context, @NonNull BackgroundLocation location);
-    }
-
-    public interface PostLocationTaskListener
-    {
-        void onRequestedAbortUpdates();
-
-        void onHttpAuthorizationUpdates();
     }
 }
