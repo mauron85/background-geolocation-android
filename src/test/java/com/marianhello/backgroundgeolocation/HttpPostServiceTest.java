@@ -95,6 +95,7 @@ public class HttpPostServiceTest {
         HttpPostService service = new HttpPostService(mockHttpURLConnection);
         service.postJSON((JSONObject) null, headers);
         verify(mockHttpURLConnection).setRequestMethod("POST");
+        verify(mockHttpURLConnection).setRequestProperty("Content-Type", "application/json");
         verify(mockHttpURLConnection).setRequestProperty("foo", "bar");
     }
 
@@ -150,6 +151,7 @@ public class HttpPostServiceTest {
         HttpPostService service = new HttpPostService(mockHttpURLConnection);
         service.postJSONString("test", null);
         verify(mockHttpURLConnection).setRequestMethod("POST");
+        verify(mockHttpURLConnection).setRequestProperty("Content-Type", "application/json");
         assertThat(outputStream.toString(), is("test"));
     }
 
@@ -191,6 +193,7 @@ public class HttpPostServiceTest {
         HttpPostService service = new HttpPostService(mockHttpURLConnection);
         assertThat(service.postJSONFile(file, headers, null), is(200));
         verify(mockHttpURLConnection).setRequestMethod("POST");
+        verify(mockHttpURLConnection).setRequestProperty("Content-Type", "application/json");
         verify(mockHttpURLConnection).setRequestProperty("foo", "bar");
         verify(mockHttpURLConnection).setFixedLengthStreamingMode((long) file.length());
         //verify(mockHttpURLConnection).setChunkedStreamingMode(0);
