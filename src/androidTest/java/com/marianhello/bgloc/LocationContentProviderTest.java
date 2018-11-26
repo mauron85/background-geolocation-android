@@ -1,6 +1,7 @@
 package com.marianhello.bgloc;
 
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.test.RenamingDelegatingContext;
 import android.test.mock.MockContentResolver;
@@ -18,6 +19,8 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_DROP_LOCATION_TABLE;
+
 public class LocationContentProviderTest extends LocationProviderTestCase {
 
     private MockContentResolver mResolver;
@@ -30,9 +33,12 @@ public class LocationContentProviderTest extends LocationProviderTestCase {
 
     public void deleteDatabase() {
         // TODO: investigate why prefix is not automatically used when deleteDatabase
-        String dbPrefix = ((RenamingDelegatingContext) getMockContext().getBaseContext()).getDatabasePrefix();
-        mContext.deleteDatabase(dbPrefix + SQLiteOpenHelper.SQLITE_DATABASE_NAME);
-        mContext.deleteDatabase(SQLiteOpenHelper.SQLITE_DATABASE_NAME);
+        RenamingDelegatingContext context = ((RenamingDelegatingContext) getMockContext().getBaseContext());
+
+        SQLiteOpenHelper dbHelper = new SQLiteOpenHelper(context);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        dbHelper.execAndLogSql(db, SQL_DROP_LOCATION_TABLE);
+        dbHelper.onCreate(db);
     }
 
     @Before

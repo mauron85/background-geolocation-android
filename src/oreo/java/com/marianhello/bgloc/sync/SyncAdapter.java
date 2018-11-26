@@ -16,10 +16,10 @@ import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.HttpPostService;
-import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.NotificationHelper;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
+import com.marianhello.bgloc.service.LocationServiceImpl;
 import com.marianhello.logging.LoggerManager;
 
 import org.json.JSONException;
@@ -165,13 +165,13 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
                 logger.debug("Location was sent to the server, and received an \"HTTP 285 Updates Not Required\"");
 
                 Bundle bundle = new Bundle();
-                bundle.putInt("action", LocationService.MSG_ON_ABORT_REQUESTED);
+                bundle.putInt("action", LocationServiceImpl.MSG_ON_ABORT_REQUESTED);
                 broadcastMessage(bundle);
             }
 
             if (responseCode == 401) {
                 Bundle bundle = new Bundle();
-                bundle.putInt("action", LocationService.MSG_ON_HTTP_AUTHORIZATION);
+                bundle.putInt("action", LocationServiceImpl.MSG_ON_HTTP_AUTHORIZATION);
                 broadcastMessage(bundle);
             }
 
@@ -227,7 +227,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
     }
 
     private void broadcastMessage(Bundle bundle) {
-        Intent intent = new Intent(LocationService.ACTION_BROADCAST);
+        Intent intent = new Intent(LocationServiceImpl.ACTION_BROADCAST);
         intent.putExtras(bundle);
         LocalBroadcastManager.getInstance(getContext().getApplicationContext()).sendBroadcast(intent);
     }

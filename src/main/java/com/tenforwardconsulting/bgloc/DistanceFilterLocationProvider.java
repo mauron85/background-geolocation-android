@@ -23,7 +23,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 
-import com.marianhello.bgloc.BackgroundGeolocationFacade;
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.provider.AbstractLocationProvider;
 import com.marianhello.utils.Tone;
@@ -48,8 +47,8 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     private static final long STATIONARY_TIMEOUT                                = 5 * 1000 * 60;    // 5 minutes.
     private static final long STATIONARY_LOCATION_POLLING_INTERVAL_LAZY         = 3 * 1000 * 60;    // 3 minutes.
     private static final long STATIONARY_LOCATION_POLLING_INTERVAL_AGGRESSIVE   = 1 * 1000 * 60;    // 1 minute.
-    private static final Integer MAX_STATIONARY_ACQUISITION_ATTEMPTS = 5;
-    private static final Integer MAX_SPEED_ACQUISITION_ATTEMPTS = 3;
+    private static final int MAX_STATIONARY_ACQUISITION_ATTEMPTS = 5;
+    private static final int MAX_SPEED_ACQUISITION_ATTEMPTS = 3;
 
     private Boolean isMoving = false;
     private Boolean isAcquiringStationaryLocation = false;
@@ -141,7 +140,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     public void onCommand(int commandId, int arg1) {
         switch(commandId) {
             case CMD_SWITCH_MODE:
-                setPace(arg1 == BackgroundGeolocationFacade.BACKGROUND_MODE ? false : true);
+                setPace(arg1 == BACKGROUND_MODE ? false : true);
                 return;
         }
     }

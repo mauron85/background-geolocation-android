@@ -14,7 +14,7 @@ import com.marianhello.bgloc.data.sqlite.SQLiteConfigurationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
-import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper10;
+import com.marianhello.bgloc.sqlite.SQLiteOpenHelper10;
 
 import junit.framework.Assert;
 
@@ -36,6 +36,7 @@ public class SQLiteOpenHelperTest {
     @Before
     public void deleteDatabase() {
         Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteOpenHelper.getHelper(ctx).close();
         ctx.deleteDatabase(SQLiteOpenHelper.SQLITE_DATABASE_NAME);
     }
 

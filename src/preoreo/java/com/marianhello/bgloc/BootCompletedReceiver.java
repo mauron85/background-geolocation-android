@@ -16,10 +16,10 @@ import android.util.Log;
 
 import org.json.JSONException;
 
-import com.marianhello.bgloc.Config;
-import com.marianhello.bgloc.LocationService;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.ConfigurationDAO;
+import com.marianhello.bgloc.service.LocationServiceImpl;
+
 /**
  * BootCompletedReceiver class
  */
@@ -44,7 +44,7 @@ public class BootCompletedReceiver extends BroadcastReceiver {
 
         if (config.getStartOnBoot()) {
             Log.i(TAG, "Starting service after boot");
-            Intent locationServiceIntent = new Intent(context, LocationService.class);
+            Intent locationServiceIntent = new Intent(context, LocationServiceImpl.class);
             locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
             locationServiceIntent.putExtra("config", config);
 

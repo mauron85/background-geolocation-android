@@ -35,6 +35,7 @@ public class SQLiteConfigurationDAOTest {
     @Before
     public void deleteDatabase() {
         Context ctx = InstrumentationRegistry.getTargetContext();
+        SQLiteOpenHelper.getHelper(ctx).close();
         ctx.deleteDatabase(SQLiteOpenHelper.SQLITE_DATABASE_NAME);
     }
 

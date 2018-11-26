@@ -18,6 +18,9 @@ public interface LocationProvider {
 
     int CMD_SWITCH_MODE = 1;
 
+    int BACKGROUND_MODE = 0;
+    int FOREGROUND_MODE = 1;
+
     void onCreate();
     void onDestroy();
     void onStart();

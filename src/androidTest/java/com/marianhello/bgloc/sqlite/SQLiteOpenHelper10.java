@@ -1,4 +1,4 @@
-package com.marianhello.bgloc.data.sqlite;
+package com.marianhello.bgloc.sqlite;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

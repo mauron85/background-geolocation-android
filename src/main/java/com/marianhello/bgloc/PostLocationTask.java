@@ -75,8 +75,12 @@ public class PostLocationTask {
     }
 
     public void add(final BackgroundLocation location) {
-        long locationId = mLocationDAO.persistLocation(location, mConfig.getMaxLocations());
-        location.setLocationId(locationId);
+        if (mConfig == null) {
+            logger.warn("PostLocationTask has no config. Did you called setConfig? Skipping location.");
+            return;
+        }
+
+        location.setLocationId(mLocationDAO.persistLocation(location));
 
         mExecutor.execute(new Runnable() {
             @Override
