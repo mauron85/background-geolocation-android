@@ -16,9 +16,9 @@ public class BackgroundActivity implements Parcelable {
     private int confidence;
     private int type;
 
-    public BackgroundActivity(Integer locationProvider, DetectedActivity actitivy) {
-        confidence = actitivy.getConfidence();
-        type = actitivy.getType();
+    public BackgroundActivity(Integer locationProvider, DetectedActivity activity) {
+        confidence = activity.getConfidence();
+        type = activity.getType();
     }
 
     private BackgroundActivity(Parcel in) {
