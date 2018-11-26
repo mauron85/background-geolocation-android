@@ -60,9 +60,12 @@ public class NotificationHelper {
             // Add an onclick handler to the notification
             String packageName = appContext.getPackageName();
             Intent launchIntent = appContext.getPackageManager().getLaunchIntentForPackage(packageName);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent contentIntent = PendingIntent.getActivity(appContext, 0, launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-            builder.setContentIntent(contentIntent);
+            if (launchIntent != null) {
+                // NOTICE: testing apps might not have registered launch intent
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                PendingIntent contentIntent = PendingIntent.getActivity(appContext, 0, launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+                builder.setContentIntent(contentIntent);
+            }
 
             Notification notification = builder.build();
             notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE | Notification.FLAG_NO_CLEAR;

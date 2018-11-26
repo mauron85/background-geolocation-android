@@ -38,7 +38,6 @@ import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
-import com.marianhello.bgloc.data.LocationDAO;
 import com.marianhello.bgloc.headless.ActivityTask;
 import com.marianhello.bgloc.headless.HeadlessTaskRunner;
 import com.marianhello.bgloc.headless.LocationTask;
@@ -83,18 +82,13 @@ public class LocationService extends Service implements ProviderDelegate {
      */
     public static final int MSG_ON_ACTIVITY = 103;
 
-    public static final int MSG_ON_SERVICE_STOPPED = 104;
+    public static final int MSG_ON_SERVICE_STARTED = 104;
 
-    public static final int MSG_ON_SERVICE_STARTED = 105;
+    public static final int MSG_ON_SERVICE_STOPPED = 105;
 
     public static final int MSG_ON_ABORT_REQUESTED = 106;
 
     public static final int MSG_ON_HTTP_AUTHORIZATION = 107;
-
-    public static final int SERVICE_STOPPED = 0;
-    public static final int SERVICE_STARTED = 1;
-
-    private static int sServiceStatus = SERVICE_STOPPED;
 
     /** notification id */
     private static int NOTIFICATION_ID = 1;
@@ -103,16 +97,17 @@ public class LocationService extends Service implements ProviderDelegate {
     private Config mConfig;
     private LocationProvider mProvider;
     private Account mSyncAccount;
-    private boolean mIsBound = false;
 
     private org.slf4j.Logger logger;
 
     private final IBinder mBinder = new LocalBinder();
-    private volatile HandlerThread mHandlerThread;
+    private HandlerThread mHandlerThread;
     private ServiceHandler mServiceHandler;
-    private HeadlessTaskRunner mHeadlessTaskRunner;
     private PostLocationTask mPostLocationTask;
-    private static ILocationTransform mLocationTransform;
+    private HeadlessTaskRunner mHeadlessTaskRunner;
+    private LocationProviderFactory mLocationProviderFactory;
+
+    private static ILocationTransform sLocationTransform;
 
     private class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
@@ -137,7 +132,6 @@ public class LocationService extends Service implements ProviderDelegate {
             stopForeground(true);
         }
 
-        mIsBound = true;
         return mBinder;
     }
 
@@ -149,7 +143,6 @@ public class LocationService extends Service implements ProviderDelegate {
             stopForeground(true);
         }
 
-        mIsBound = true;
         super.onRebind(intent);
     }
 
@@ -158,11 +151,10 @@ public class LocationService extends Service implements ProviderDelegate {
         // All clients have unbound with unbindService()
         logger.debug("All clients have been unbound from service");
 
-        if (isStarted() && !isInForeground(this)) {
+        if (isStarted() && !isInForeground()) {
             startForeground();
         }
 
-        mIsBound = false;
         return true; // Ensures onRebind() is called when a client re-binds.
     }
 
@@ -179,7 +171,9 @@ public class LocationService extends Service implements ProviderDelegate {
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.  We also make it
         // background priority so CPU-intensive work will not disrupt our UI.
-        mHandlerThread = new HandlerThread("LocationService.Thread", Process.THREAD_PRIORITY_BACKGROUND);
+        if (mHandlerThread == null) {
+            mHandlerThread = new HandlerThread("LocationService.Thread", Process.THREAD_PRIORITY_BACKGROUND);
+        }
         mHandlerThread.start();
         // An Android service handler is a handler running on a specific background thread.
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
@@ -223,19 +217,25 @@ public class LocationService extends Service implements ProviderDelegate {
     @Override
     public void onDestroy() {
         logger.info("Destroying LocationService");
+
         // workaround for issue #276
         if (mProvider != null) {
             mProvider.onDestroy();
-            mProvider = null;
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            mHandlerThread.quitSafely();
-        } else {
-            mHandlerThread.quit(); //sorry
+
+        if (mHandlerThread != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                mHandlerThread.quitSafely();
+            } else {
+                mHandlerThread.quit(); //sorry
+            }
         }
+
         if (mPostLocationTask != null) {
             mPostLocationTask.shutdown();
         }
+
+
         unregisterReceiver(connectivityChangeReceiver);
 
         super.onDestroy();
@@ -270,7 +270,8 @@ public class LocationService extends Service implements ProviderDelegate {
         mPostLocationTask.setConfig(mConfig);
         mPostLocationTask.clearQueue();
 
-        LocationProviderFactory spf = new LocationProviderFactory(this);
+        LocationProviderFactory spf = mLocationProviderFactory != null
+                ? mLocationProviderFactory : new LocationProviderFactory(this);
         mProvider = spf.getInstance(mConfig.getLocationProvider());
         mProvider.setDelegate(this);
         mProvider.onCreate();
@@ -281,11 +282,7 @@ public class LocationService extends Service implements ProviderDelegate {
             startForeground();
         }
 
-        Bundle bundle = new Bundle();
-        bundle.putInt("action", MSG_ON_SERVICE_STARTED);
-        broadcastMessage(bundle);
-
-        sServiceStatus = SERVICE_STARTED;
+        broadcastMessage(MSG_ON_SERVICE_STARTED);
 
         // We want this service to continue running until it is explicitly stopped
         return START_STICKY;
@@ -311,8 +308,6 @@ public class LocationService extends Service implements ProviderDelegate {
 //        locationServiceIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
         // start service to keep service running even if no clients are bound to it
         startService(locationServiceIntent);
-
-        sServiceStatus = SERVICE_STARTED;
     }
 
     public synchronized void stop() {
@@ -324,16 +319,12 @@ public class LocationService extends Service implements ProviderDelegate {
             mProvider.onStop();
         }
 
-        if (getConfig().getStartForeground()) {
+        if (isInForeground()) {
             stopForeground(true);
         }
         stopSelf();
 
-        Bundle bundle = new Bundle();
-        bundle.putInt("action", MSG_ON_SERVICE_STOPPED);
-        broadcastMessage(bundle);
-
-        sServiceStatus = SERVICE_STOPPED;
+        broadcastMessage(MSG_ON_SERVICE_STOPPED);
     }
 
     public void configure(Config config) {
@@ -472,6 +463,12 @@ public class LocationService extends Service implements ProviderDelegate {
         broadcastMessage(bundle);
     }
 
+    private void broadcastMessage(int msgId) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", msgId);
+        broadcastMessage(bundle);
+    }
+
     private void broadcastMessage(Bundle bundle) {
         Intent intent = new Intent(ACTION_BROADCAST);
         intent.putExtras(bundle);
@@ -497,11 +494,15 @@ public class LocationService extends Service implements ProviderDelegate {
     }
 
     @Override
-    public void unregisterReceiver (BroadcastReceiver receiver) {
-        super.unregisterReceiver(receiver);
+    public void unregisterReceiver(BroadcastReceiver receiver) {
+        try {
+            super.unregisterReceiver(receiver);
+        } catch (IllegalArgumentException ex) {
+            // if was not registered ignore exception
+        }
     }
 
-    private Config getConfig() {
+    Config getConfig() {
         Config config = mConfig;
         if (config == null) {
             ConfigurationDAO dao = DAOFactory.createConfigurationDAO(this);
@@ -520,8 +521,16 @@ public class LocationService extends Service implements ProviderDelegate {
         return mConfig;
     }
 
+    void setHandlerThread(HandlerThread handlerThread) {
+        mHandlerThread = handlerThread;
+    }
+
+    void setLocationProviderFactory(LocationProviderFactory factory) {
+        mLocationProviderFactory = factory;
+    }
+
     private void runHeadlessTask(Task task) {
-        if (mIsBound) { // only run headless task if there are no bound clients (activity)
+        if (isBound()) { // only run headless task if there are no bound clients (activity)
             return;
         }
 
@@ -545,8 +554,8 @@ public class LocationService extends Service implements ProviderDelegate {
     }
 
     private void handleLocation(BackgroundLocation location) {
-        if (mLocationTransform != null) {
-            location = mLocationTransform.transformLocationBeforeCommit(LocationService.this, location);
+        if (sLocationTransform != null) {
+            location = sLocationTransform.transformLocationBeforeCommit(LocationService.this, location);
 
             if (location == null) {
                 logger.debug("Skipping coordinate as requested by the locationTransform");
@@ -554,19 +563,17 @@ public class LocationService extends Service implements ProviderDelegate {
             }
         }
 
-        mPostLocationTask.add(location);
+        if (mPostLocationTask != null) {
+            mPostLocationTask.add(location);
+        }
     }
 
     public void handleRequestedAbortUpdates() {
-        Bundle bundle = new Bundle();
-        bundle.putInt("action", MSG_ON_ABORT_REQUESTED);
-        broadcastMessage(bundle);
+        broadcastMessage(MSG_ON_ABORT_REQUESTED);
     }
 
     public void handleHttpAuthorizationUpdates() {
-        Bundle bundle = new Bundle();
-        bundle.putInt("action", MSG_ON_HTTP_AUTHORIZATION);
-        broadcastMessage(bundle);
+        broadcastMessage(MSG_ON_HTTP_AUTHORIZATION);
     }
 
     /**
@@ -588,27 +595,50 @@ public class LocationService extends Service implements ProviderDelegate {
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
-    public static boolean isInForeground(Context context) {
+    private ActivityManager.RunningServiceInfo getServiceInfo() {
         String serviceName = LocationService.class.getName();
-        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager manager = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (serviceName.equals(service.service.getClassName())) {
-                return service.foreground;
+                return service;
             }
         }
+        return null;
+    }
+
+    public boolean isBound() {
+        ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
+        if (serviceInfo != null) {
+            return serviceInfo.clientCount > 0;
+        }
+
         return false;
     }
 
-    public static boolean isStarted() {
-        return sServiceStatus == SERVICE_STARTED;
+    public boolean isInForeground() {
+        ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
+        if (serviceInfo != null) {
+            return serviceInfo.foreground;
+        }
+
+        return false;
+    }
+
+    public boolean isStarted() {
+        ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
+        if (serviceInfo != null) {
+            return serviceInfo.started;
+        }
+
+        return false;
     }
 
     public static void setLocationTransform(@Nullable ILocationTransform transform) {
-        mLocationTransform = transform;
+        sLocationTransform = transform;
     }
 
     public static @Nullable ILocationTransform getLocationTransform() {
-        return mLocationTransform;
+        return sLocationTransform;
     }
 
     public interface ILocationTransform

@@ -1,4 +1,4 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc.test;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -11,6 +11,7 @@ import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 
 import com.marianhello.bgloc.data.provider.LocationContentProvider;
+import com.marianhello.bgloc.test.TestConstants;
 
 /**
  * @author diego

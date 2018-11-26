@@ -1,4 +1,4 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc;
 
 import android.database.Cursor;
 import android.net.Uri;
@@ -9,6 +9,8 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.provider.LocationContentProvider;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
+import com.marianhello.bgloc.test.LocationProviderTestCase;
+import com.marianhello.bgloc.test.TestConstants;
 
 import org.junit.Assert;
 import org.junit.Before;

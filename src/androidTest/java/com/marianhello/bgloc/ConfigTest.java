@@ -1,4 +1,4 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc;
 
 import android.os.Parcel;
 

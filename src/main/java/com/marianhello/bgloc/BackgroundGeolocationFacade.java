@@ -50,6 +50,8 @@ public class BackgroundGeolocationFacade {
 
     public static final int BACKGROUND_MODE = 0;
     public static final int FOREGROUND_MODE = 1;
+    public static final int SERVICE_STARTED = 1;
+    public static final int SERVICE_STOPPED = 0;
     public static final int AUTHORIZATION_AUTHORIZED = 1;
     public static final int AUTHORIZATION_DENIED = 0;
     public static final String[] PERMISSIONS = {
@@ -183,13 +185,13 @@ public class BackgroundGeolocationFacade {
 
                 case LocationService.MSG_ON_SERVICE_STARTED: {
                     logger.debug("Received MSG_ON_SERVICE_STARTED");
-                    mDelegate.onServiceStatusChanged(LocationService.SERVICE_STARTED);
+                    mDelegate.onServiceStatusChanged(SERVICE_STARTED);
                     return;
                 }
 
                 case LocationService.MSG_ON_SERVICE_STOPPED: {
                     logger.debug("Received MSG_ON_SERVICE_STOPPED");
-                    mDelegate.onServiceStatusChanged(LocationService.SERVICE_STOPPED);
+                    mDelegate.onServiceStatusChanged(SERVICE_STOPPED);
                     return;
                 }
 
@@ -318,7 +320,7 @@ public class BackgroundGeolocationFacade {
     public void resume() {
         synchronized (mLock) {
             registerServiceBroadcast();
-            if (LocationService.isStarted()) {
+            if (mService != null && mService.isStarted()) {
                 registerLocationModeChangeReceiver();
             }
 
@@ -549,7 +551,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public boolean isRunning() {
-        return LocationService.isStarted();
+        return mService != null ? mService.isStarted() : false;
     }
 
     private void bindService() throws TimeoutException {

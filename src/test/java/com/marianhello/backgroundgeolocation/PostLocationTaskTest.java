@@ -158,7 +158,7 @@ public class PostLocationTaskTest {
     }
 
     @Test
-    public void persistTaskSetUnsyncedOnShutdown() throws ProtocolException, InterruptedException {
+    public void persistTaskSetUnsyncedOnShutdown() throws InterruptedException {
         LocationDAO mockDAO = mock(LocationDAO.class);
 
         PostLocationTaskListener mockListener = mock(PostLocationTaskListener.class);

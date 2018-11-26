@@ -1,44 +1,42 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc;
 
-import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
-import android.support.test.InstrumentationRegistry;
-import android.support.test.runner.AndroidJUnit4;
-import android.test.suitebuilder.annotation.SmallTest;
 
 import com.marianhello.bgloc.data.BackgroundLocation;
-import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
+import com.marianhello.bgloc.data.LocationDAO;
+import com.marianhello.bgloc.data.provider.ContentProviderLocationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
-
-import junit.framework.Assert;
+import com.marianhello.bgloc.test.LocationProviderTestCase;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-/**
- * Created by finch on 12/07/16.
- */
-@RunWith(AndroidJUnit4.class)
-@SmallTest
-public class SQLiteLocationDAOTest {
+import static com.marianhello.bgloc.data.sqlite.SQLiteLocationContract.LocationEntry.SQL_DROP_LOCATION_TABLE;
+import static junit.framework.Assert.assertEquals;
+
+public class ContentProviderLocationDAOTest extends LocationProviderTestCase {
+    public void deleteDatabase() {
+        SQLiteOpenHelper dbHelper = new SQLiteOpenHelper(getContext());
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        dbHelper.execAndLogSql(db, SQL_DROP_LOCATION_TABLE);
+        dbHelper.onCreate(db);
+    }
 
     @Before
-    public void deleteDatabase() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        ctx.deleteDatabase(SQLiteOpenHelper.SQLITE_DATABASE_NAME);
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+        deleteDatabase();
     }
 
     @Test
-    public void persistLocation() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testPersistLocation() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         Location location = new Location("fake");
         location.setAccuracy(200);
@@ -49,33 +47,31 @@ public class SQLiteLocationDAOTest {
         location.setSpeed(20);
         location.setProvider("test");
         location.setTime(1000);
-        BackgroundLocation bgLocation = new BackgroundLocation(location);
+        BackgroundLocation bgLocation = BackgroundLocation.fromLocation(location);
 
         dao.persistLocation(bgLocation);
 
         ArrayList<BackgroundLocation> locations = new ArrayList(dao.getAllLocations());
-        Assert.assertEquals(1, locations.size());
+        assertEquals(1, locations.size());
 
         BackgroundLocation storedLocation = locations.get(0);
-        Assert.assertEquals(200, storedLocation.getAccuracy(), 0);
-        Assert.assertEquals(900, storedLocation.getAltitude(), 0);
-        Assert.assertEquals(2, storedLocation.getBearing(), 0);
-        Assert.assertEquals(40.21, storedLocation.getLatitude(), 0);
-        Assert.assertEquals(23.45, storedLocation.getLongitude(), 0);
-        Assert.assertEquals(20, storedLocation.getSpeed(), 0);
-        Assert.assertEquals("test", storedLocation.getProvider(), "test");
-        Assert.assertEquals(1000, storedLocation.getTime(), 0);
-        Assert.assertFalse(storedLocation.hasMockLocationsEnabled());
-        Assert.assertFalse(storedLocation.areMockLocationsEnabled());
-        Assert.assertTrue(storedLocation.hasIsFromMockProvider()); // because setIsFromMockProvider is called in constructor
-        Assert.assertFalse(storedLocation.isFromMockProvider());
+        assertEquals(200, storedLocation.getAccuracy(), 0);
+        assertEquals(900, storedLocation.getAltitude(), 0);
+        assertEquals(2, storedLocation.getBearing(), 0);
+        assertEquals(40.21, storedLocation.getLatitude(), 0);
+        assertEquals(23.45, storedLocation.getLongitude(), 0);
+        assertEquals(20, storedLocation.getSpeed(), 0);
+        assertEquals("test", storedLocation.getProvider(), "test");
+        assertEquals(1000, storedLocation.getTime(), 0);
+        junit.framework.Assert.assertFalse(storedLocation.hasMockLocationsEnabled());
+        junit.framework.Assert.assertFalse(storedLocation.areMockLocationsEnabled());
+        junit.framework.Assert.assertTrue(storedLocation.hasIsFromMockProvider()); // because setIsFromMockProvider is called in constructor
+        junit.framework.Assert.assertFalse(storedLocation.isFromMockProvider());
     }
 
     @Test
-    public void persistLocationIsMock() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testPersistLocationIsMock() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation bgLocation = new BackgroundLocation();
         bgLocation.setMockLocationsEnabled(true);
@@ -84,61 +80,54 @@ public class SQLiteLocationDAOTest {
         dao.persistLocation(bgLocation);
 
         ArrayList<BackgroundLocation> locations = new ArrayList(dao.getAllLocations());
-        Assert.assertEquals(1, locations.size());
+        assertEquals(1, locations.size());
 
         BackgroundLocation storedLocation = locations.get(0);
-        Assert.assertTrue(storedLocation.hasMockLocationsEnabled());
-        Assert.assertTrue(storedLocation.areMockLocationsEnabled());
-        Assert.assertTrue(storedLocation.hasIsFromMockProvider());
-        Assert.assertTrue(storedLocation.isFromMockProvider());
+        junit.framework.Assert.assertTrue(storedLocation.hasMockLocationsEnabled());
+        junit.framework.Assert.assertTrue(storedLocation.areMockLocationsEnabled());
+        junit.framework.Assert.assertTrue(storedLocation.hasIsFromMockProvider());
+        junit.framework.Assert.assertTrue(storedLocation.isFromMockProvider());
     }
 
     @Test
-    public void deleteLocationById() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testDeleteLocationById() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
-        BackgroundLocation bgLocation = new BackgroundLocation(new Location("fake"));
+        BackgroundLocation bgLocation = BackgroundLocation.fromLocation(new Location("fake"));
         Collection<BackgroundLocation> locations = null;
 
         Long locationId = dao.persistLocation(bgLocation);
 
         locations = dao.getAllLocations();
-        Assert.assertEquals(1, locations.size());
+        assertEquals(1, locations.size());
 
         dao.deleteLocationById(locationId);
 
         locations = dao.getValidLocations();
-        Assert.assertEquals(0, locations.size());
+        assertEquals(0, locations.size());
     }
 
     @Test
-    public void deleteAllLocations() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
-
+    public void testDeleteAllLocations() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
         Collection<BackgroundLocation> locations = null;
 
         for (int i = 0; i < 10; i++) {
-            dao.persistLocation(new BackgroundLocation(new Location("fake")));
+            dao.persistLocation(BackgroundLocation.fromLocation(new Location("fake")));
         }
 
         locations = dao.getValidLocations();
-        Assert.assertEquals(10, locations.size());
+        assertEquals(10, locations.size());
 
         dao.deleteAllLocations();
 
         locations = dao.getValidLocations();
-        Assert.assertEquals(0, locations.size());
+        assertEquals(0, locations.size());
     }
 
     @Test
-    public void getAllLocations() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetAllLocations() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         Location location = null;
         BackgroundLocation bgLocation = null;
@@ -153,7 +142,7 @@ public class SQLiteLocationDAOTest {
             location.setSpeed(20 + i);
             location.setProvider("test");
             location.setTime(1000 + i);
-            bgLocation = new BackgroundLocation(location);
+            bgLocation = BackgroundLocation.fromLocation(location);
             dao.persistLocation(bgLocation);
         }
 
@@ -162,70 +151,76 @@ public class SQLiteLocationDAOTest {
         BackgroundLocation storedLocation = null;
         for (int i = 0; i < 10; i++) {
             storedLocation = it.next();
-            Assert.assertEquals(200 + i, storedLocation.getAccuracy(), 0);
-            Assert.assertEquals(900 + i, storedLocation.getAltitude(), 0);
-            Assert.assertEquals(2 + i, storedLocation.getBearing(), 0);
-            Assert.assertEquals(40.21 + i, storedLocation.getLatitude(), 0);
-            Assert.assertEquals(23.45 + i,storedLocation.getLongitude(), 0);
-            Assert.assertEquals(20 + i, storedLocation.getSpeed(), 0);
-            Assert.assertEquals("test", storedLocation.getProvider());
-            Assert.assertEquals(1000 + i, storedLocation.getTime(), 0);
+            assertEquals(200 + i, storedLocation.getAccuracy(), 0);
+            assertEquals(900 + i, storedLocation.getAltitude(), 0);
+            assertEquals(2 + i, storedLocation.getBearing(), 0);
+            assertEquals(40.21 + i, storedLocation.getLatitude(), 0);
+            assertEquals(23.45 + i,storedLocation.getLongitude(), 0);
+            assertEquals(20 + i, storedLocation.getSpeed(), 0);
+            assertEquals("test", storedLocation.getProvider());
+            assertEquals(1000 + i, storedLocation.getTime(), 0);
         }
     }
 
     @Test
-    public void persistLocationWithRowLimit() {
+    public void testPersistLocationWithRowLimit() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
+
         int maxRows = 100;
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         for (int i = 0; i < maxRows * 2; i++) {
-            dao.persistLocation(new BackgroundLocation(new Location("fake")), maxRows);
+            dao.persistLocation(BackgroundLocation.fromLocation(new Location("fake")), maxRows);
         }
 
         Collection<BackgroundLocation> locations = dao.getAllLocations();
-        Assert.assertEquals(maxRows, locations.size());
+        assertEquals(maxRows, locations.size());
     }
 
     @Test
-    public void persistLocationWithRowLimitWhenMaxRowsReduced() {
+    public void testShouldReplaceOldLocation() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
+
+        dao.persistLocation(BackgroundLocation.fromLocation(new Location("old")), 1);
+        dao.persistLocation(BackgroundLocation.fromLocation(new Location("new")), 1);
+
+        Collection<BackgroundLocation> locations = dao.getAllLocations();
+        assertEquals(1, locations.size());
+        assertEquals("new", locations.iterator().next().getProvider());
+    }
+
+    @Test
+    public void testPersistLocationWithRowLimitWhenMaxRowsReduced() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
+
         int maxRowsRun[] = {100, 10};
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
 
         for (int i = 0; i < maxRowsRun.length; i++) {
             int maxRows = maxRowsRun[i];
             for (int j = 0; j < maxRows * 2; j++) {
-                dao.persistLocation(new BackgroundLocation(new Location("fake")), maxRows);
+                dao.persistLocation(BackgroundLocation.fromLocation(new Location("fake")), maxRows);
             }
             Collection<BackgroundLocation> locations = dao.getAllLocations();
-            Assert.assertEquals(maxRows, locations.size());
+            assertEquals(maxRows, locations.size());
         }
 
-        Long locationId = dao.persistLocation(new BackgroundLocation(new Location("fake")));
-        Assert.assertEquals(locationId, Long.valueOf(101));
+        Long locationId = dao.persistLocation(BackgroundLocation.fromLocation(new Location("fake")));
+        assertEquals(locationId, Long.valueOf(101));
     }
 
     @Test
-    public void persistLocationWithBatchId() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testPersistLocationWithBatchId() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = new BackgroundLocation();
         location.setBatchStartMillis(1000L);
         dao.persistLocation(location);
         ArrayList<BackgroundLocation> locations = new ArrayList(dao.getAllLocations());
-        Assert.assertEquals(Long.valueOf(1000L), locations.get(0).getBatchStartMillis());
+        assertEquals(Long.valueOf(1000L), locations.get(0).getBatchStartMillis());
     }
 
     @Test
-    public void getLocationsForSyncCount() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetLocationsForSyncCount() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location;
         for (int i = 1; i < 100; i++) {
@@ -243,17 +238,15 @@ public class SQLiteLocationDAOTest {
             dao.persistLocation(location);
         }
 
-        Assert.assertEquals(66, dao.getValidLocations().size());
-        Assert.assertEquals(99, dao.getAllLocations().size());
-        Assert.assertEquals(66L, dao.getLocationsForSyncCount(10001L));
-        Assert.assertEquals(33L, dao.getLocationsForSyncCount(1000L));
+        assertEquals(66, dao.getValidLocations().size());
+        assertEquals(99, dao.getAllLocations().size());
+        assertEquals(66L, dao.getLocationsForSyncCount(10001L));
+        assertEquals(33L, dao.getLocationsForSyncCount(1000L));
     }
 
     @Test
-    public void getLocationById() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetLocationById() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         Location location = null;
         BackgroundLocation bgLocation = null;
@@ -268,19 +261,17 @@ public class SQLiteLocationDAOTest {
             location.setSpeed(20 + i);
             location.setProvider("test");
             location.setTime(1000 + i);
-            bgLocation = new BackgroundLocation(location);
+            bgLocation = BackgroundLocation.fromLocation(location);
             dao.persistLocation(bgLocation);
         }
 
         BackgroundLocation pending = dao.getLocationById(2);
-        Assert.assertEquals(Long.valueOf(2), pending.getLocationId());
+        assertEquals(Long.valueOf(2), pending.getLocationId());
     }
 
     @Test
-    public void getFirstPendingLocation() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetFirstPendingLocation() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = null;
 
@@ -303,14 +294,12 @@ public class SQLiteLocationDAOTest {
         }
 
         BackgroundLocation pending = dao.getFirstUnpostedLocation();
-        Assert.assertEquals(Long.valueOf(4), pending.getLocationId());
+        assertEquals(Long.valueOf(4), pending.getLocationId());
     }
 
     @Test
-    public void getNextPendingLocation() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetNextPendingLocation() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = null;
 
@@ -333,14 +322,12 @@ public class SQLiteLocationDAOTest {
         }
 
         BackgroundLocation pending = dao.getNextUnpostedLocation(4);
-        Assert.assertEquals(Long.valueOf(5), pending.getLocationId());
+        assertEquals(Long.valueOf(5), pending.getLocationId());
     }
 
     @Test
-    public void getPendingLocationsCount() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testGetPendingLocationsCount() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = null;
 
@@ -362,14 +349,12 @@ public class SQLiteLocationDAOTest {
             dao.persistLocation(location);
         }
 
-        Assert.assertEquals(2, dao.getUnpostedLocationsCount());
+        assertEquals(2, dao.getUnpostedLocationsCount());
     }
 
     @Test
-    public void deleteFirstPendingLocation() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testDeleteFirstPendingLocation() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = null;
 
@@ -392,14 +377,12 @@ public class SQLiteLocationDAOTest {
         }
 
         BackgroundLocation deleted = dao.deleteFirstUnpostedLocation();
-        Assert.assertEquals(Long.valueOf(4), deleted.getLocationId());
+        assertEquals(Long.valueOf(4), deleted.getLocationId());
     }
 
     @Test
-    public void deletePendingLocations() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testDeletePendingLocations() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = null;
 
@@ -422,15 +405,13 @@ public class SQLiteLocationDAOTest {
         }
 
         dao.deleteUnpostedLocations();
-        Assert.assertEquals(0, dao.getUnpostedLocationsCount());
-        Assert.assertEquals(2, dao.getLocationsForSyncCount(0));
+        assertEquals(0, dao.getUnpostedLocationsCount());
+        assertEquals(2, dao.getLocationsForSyncCount(0));
     }
 
     @Test
-    public void persistLocationForSync() {
-        Context ctx = InstrumentationRegistry.getTargetContext();
-        SQLiteDatabase db = new SQLiteOpenHelper(ctx).getWritableDatabase();
-        SQLiteLocationDAO dao = new SQLiteLocationDAO(db);
+    public void testPersistLocationForSync() {
+        LocationDAO dao = new ContentProviderLocationDAO(getContext());
 
         BackgroundLocation location = new BackgroundLocation();
         location.setProvider("fake");
@@ -445,11 +426,11 @@ public class SQLiteLocationDAOTest {
 
         long locationId = dao.persistLocation(location);
         location.setLocationId(locationId);
-        Assert.assertEquals(1, dao.getUnpostedLocationsCount());
-        Assert.assertEquals(0, dao.getLocationsForSyncCount(0));
+        assertEquals(1, dao.getUnpostedLocationsCount());
+        assertEquals(0, dao.getLocationsForSyncCount(0));
 
         dao.persistLocationForSync(location, 100);
-        Assert.assertEquals(0, dao.getUnpostedLocationsCount());
-        Assert.assertEquals(1, dao.getLocationsForSyncCount(0));
+        assertEquals(0, dao.getUnpostedLocationsCount());
+        assertEquals(1, dao.getLocationsForSyncCount(0));
     }
 }

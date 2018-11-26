@@ -1,6 +1,6 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc;
 
-import com.marianhello.bgloc.ResourceResolver;
+import com.marianhello.bgloc.test.TestConstants;
 
 public class TestResourceResolver extends ResourceResolver {
 

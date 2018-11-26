@@ -1,4 +1,4 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc.data.sqlite;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -62,7 +62,7 @@ public class SQLiteOpenHelper10 extends android.database.sqlite.SQLiteOpenHelper
     private static final String SQL_DELETE_LOCATION_TABLE =
             "DROP TABLE IF EXISTS " + LocationEntry.TABLE_NAME;
 
-    SQLiteOpenHelper10(Context context) {
+    public SQLiteOpenHelper10(Context context) {
         super(context, SQLITE_DATABASE_NAME, null, DATABASE_VERSION);
     }
 

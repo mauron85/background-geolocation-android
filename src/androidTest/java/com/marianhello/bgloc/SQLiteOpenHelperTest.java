@@ -1,4 +1,4 @@
-package com.marianhello.backgroundgeolocation;
+package com.marianhello.bgloc;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -9,12 +9,12 @@ import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 import android.test.suitebuilder.annotation.SmallTest;
 
-import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.sqlite.SQLiteConfigurationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationContract;
 import com.marianhello.bgloc.data.sqlite.SQLiteLocationDAO;
 import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper;
+import com.marianhello.bgloc.data.sqlite.SQLiteOpenHelper10;
 
 import junit.framework.Assert;
 
