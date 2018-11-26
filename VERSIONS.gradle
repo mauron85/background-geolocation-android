@@ -6,6 +6,7 @@ def DEFAULT_TARGET_SDK_VERSION = 26
 def DEFAULT_MIN_SDK_VERSION = 16
 def DEFAULT_PLAY_SERVICES_VERSION = "11+"
 def DEFAULT_SUPPORT_LIB_VERSION = "27.1.1"
+def DEFAULT_REACT_NATIVE_LIB_VERSION = "+"
 
 def MOCKITO_CORE_VERSION = "1.10.19"
 def POWERMOCK_VERSION = "1.6.2"
@@ -26,6 +27,17 @@ ext {
             applicationId = project(':app').android.defaultConfig.applicationId
         }
         return applicationId
+    }
+
+    getReactNativeLibVersion = { ->
+        def reactNativeLibVersion = DEFAULT_REACT_NATIVE_LIB_VERSION
+        if (!hasRootProject()) {
+            return reactNativeLibVersion
+        }
+        if (rootProject.hasProperty('reactNativeLibVersion')) {
+            reactNativeLibVersion = rootProject.reactNativeLibVersion
+        }
+        return reactNativeLibVersion
     }
 
     getPlayServicesVersion = { ->
@@ -138,7 +150,7 @@ ext {
     ]
 
     libs = [
-        reactNative: [group: 'com.facebook.react', name: 'react-native', version: '+'],
+        reactNative: [group: 'com.facebook.react', name: 'react-native', version: getReactNativeLibVersion()],
         permissions: [group: 'com.intentfilter', name: 'android-permissions', version: '0.1.6'],
         logback: [group: 'com.github.tony19', name: 'logback-android', version: '1.1.1-9'],
         slf4j: [group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'],
