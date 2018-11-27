@@ -11,7 +11,7 @@ public interface PluginDelegate {
     void onAuthorizationChanged(int authStatus);
     void onLocationChanged(BackgroundLocation location);
     void onStationaryChanged(BackgroundLocation location);
-    void onActitivyChanged(BackgroundActivity activity);
+    void onActivityChanged(BackgroundActivity activity);
     void onServiceStatusChanged(int status);
     void onAbortRequested();
     void onHttpAuthorization();

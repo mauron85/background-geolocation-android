@@ -168,7 +168,7 @@ public class BackgroundGeolocationFacade {
                     logger.debug("Received MSG_ON_ACTIVITY");
                     bundle.setClassLoader(LocationService.class.getClassLoader());
                     BackgroundActivity activity = (BackgroundActivity) bundle.getParcelable("payload");
-                    mDelegate.onActitivyChanged(activity);
+                    mDelegate.onActivityChanged(activity);
                     return;
                 }
 
