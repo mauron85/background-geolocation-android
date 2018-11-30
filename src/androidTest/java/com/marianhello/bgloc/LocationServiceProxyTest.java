@@ -13,8 +13,10 @@ import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.provider.TestLocationProviderFactory;
 import com.marianhello.bgloc.service.LocationServiceImpl;
+import com.marianhello.bgloc.service.LocationServiceIntentBuilder;
 import com.marianhello.bgloc.service.LocationServiceProxy;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -26,6 +28,7 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
+import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 
@@ -35,19 +38,23 @@ public class LocationServiceProxyTest {
     @Rule
     public final ServiceTestRule mServiceRule = new ServiceTestRule();
 
-    @BeforeClass
-    public static void setUp() {
+    private LocationServiceProxy proxy;
+
+    @Before
+    public void setUp() {
         LocationServiceImpl.setLocationProviderFactory(new TestLocationProviderFactory());
+        proxy = new LocationServiceProxy(InstrumentationRegistry.getTargetContext());
     }
 
-    @AfterClass
-    public static void tearDown() {
+    @After
+    public void tearDown() {
         LocationServiceImpl.setLocationProviderFactory(null);
+        Context ctx = InstrumentationRegistry.getTargetContext();
+        ctx.stopService(new Intent(ctx, LocationServiceImpl.class));
     }
 
     @Test(timeout = 5000)
     public void testStart() throws InterruptedException {
-        final LocationServiceProxy proxy = new LocationServiceProxy(InstrumentationRegistry.getTargetContext());
         final CountDownLatch latch = new CountDownLatch(1);
         BroadcastReceiver serviceBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -71,7 +78,6 @@ public class LocationServiceProxyTest {
 
     @Test(timeout = 5000)
     public void testStop() throws InterruptedException {
-        final LocationServiceProxy proxy = new LocationServiceProxy(InstrumentationRegistry.getTargetContext());
         final CountDownLatch latch = new CountDownLatch(1);
         BroadcastReceiver serviceBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -88,6 +94,7 @@ public class LocationServiceProxyTest {
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(InstrumentationRegistry.getTargetContext());
         lbm.registerReceiver(serviceBroadcastReceiver, new IntentFilter(LocationServiceImpl.ACTION_BROADCAST));
 
+        proxy.start();
         proxy.stop();
         latch.await();
         lbm.unregisterReceiver(serviceBroadcastReceiver);
@@ -95,7 +102,6 @@ public class LocationServiceProxyTest {
 
     @Test(timeout = 5000)
     public void testConfigure() throws TimeoutException, InterruptedException {
-        final LocationServiceProxy proxy = new LocationServiceProxy(InstrumentationRegistry.getTargetContext());
         Context context = InstrumentationRegistry.getTargetContext();
         // Create the service Intent.
         Intent serviceIntent = new Intent(context, LocationServiceImpl.class);
@@ -112,9 +118,18 @@ public class LocationServiceProxyTest {
         Thread.sleep(4000);
         assertThat(service.getConfig().getUrl(), equalTo("http://locationserviceproxy.net/"));
 
-        service.stop();
         mServiceRule.unbindService();
     }
+
+    @Test(timeout = 5000)
+    public void testShouldNotBeRunningAfterConfigure() throws TimeoutException, InterruptedException {
+        assertThat(proxy.isStarted(), is(false));
+        assertThat(proxy.isRunning(), is(false));
+        proxy.configure(Config.getDefault());
+        assertThat(proxy.isStarted(), is(true));
+        assertThat(proxy.isRunning(), is(false));
+    }
+
 
     @Ignore
     @Test(timeout = 5000)

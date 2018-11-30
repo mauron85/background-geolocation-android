@@ -95,7 +95,7 @@ public class LocationServiceTest {
 
 
         //assertThat(mService.isBound(), is(false));
-        assertThat(mService.isStarted(), is(false));
+        assertThat(mService.isRunning(), is(false));
         Intent intent = LocationServiceIntentBuilder
                 .getInstance(context)
                 .setCommand(0)
@@ -103,24 +103,24 @@ public class LocationServiceTest {
         mServiceRule.startService(intent);
 
         latch.await(5, TimeUnit.SECONDS);
-        assertThat(mService.isStarted(), is(true));
+        assertThat(mService.isRunning(), is(true));
     }
 
     @Test(timeout = 5000)
     public void testWithBoundService() {
         // Verify that the mService is working correctly.
-        assertThat(mService.isStarted(), is(false));
+        assertThat(mService.isRunning(), is(false));
         assertThat(mService.isBound(), is(true));
         assertThat(mService.getConfig(), is(any(Config.class)));
     }
 
     @Test(timeout = 5000)
     public void testStartStop() {
-        assertThat(mService.isStarted(), is(false));
+        assertThat(mService.isRunning(), is(false));
         mService.start();
-        assertThat(mService.isStarted(), is(true));
+        assertThat(mService.isRunning(), is(true));
         mService.stop();
-        assertThat(mService.isStarted(), is(false));
+        assertThat(mService.isRunning(), is(false));
     }
 
     @Test(timeout = 5000)
@@ -134,7 +134,7 @@ public class LocationServiceTest {
 
                 if (action == LocationServiceImpl.MSG_ON_LOCATION) {
                     bundle.setClassLoader(LocationServiceImpl.class.getClassLoader());
-                    BackgroundLocation location = (BackgroundLocation) bundle.getParcelable("payload");
+                    BackgroundLocation location = bundle.getParcelable("payload");
 
                     assertThat(location, isA(BackgroundLocation.class));
                     assertThat(location.getAltitude(), equalTo(666.0));

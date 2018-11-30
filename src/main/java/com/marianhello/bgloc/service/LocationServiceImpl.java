@@ -64,7 +64,7 @@ import static com.marianhello.bgloc.service.LocationServiceIntentBuilder.contain
 import static com.marianhello.bgloc.service.LocationServiceIntentBuilder.getCommand;
 import static com.marianhello.bgloc.service.LocationServiceIntentBuilder.getMessage;
 
-public class LocationServiceImpl extends Service implements ProviderDelegate, LocationService, LocationServiceInfo {
+public class LocationServiceImpl extends Service implements ProviderDelegate, LocationService {
 
     public static final String ACTION_BROADCAST = ".broadcast";
 
@@ -119,7 +119,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     private HeadlessTaskRunner mHeadlessTaskRunner;
 
     private long mServiceId = -1;
-    private boolean mIsStarted = false;
+    private static boolean sIsRunning = false;
     private boolean mIsInForeground = false;
 
     private static LocationTransform sLocationTransform;
@@ -163,6 +163,8 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     @Override
     public void onCreate() {
         super.onCreate();
+
+        sIsRunning = false;
 
         UncaughtExceptionLogger.register(this);
 
@@ -244,6 +246,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
         unregisterReceiver(connectivityChangeReceiver);
 
+        sIsRunning = false;
         super.onDestroy();
     }
 
@@ -272,7 +275,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         boolean containsCommand = containsCommand(intent);
         logger.debug(
                 String.format("Service in [%s] state. cmdId: [%s]. startId: [%d]",
-                        mIsStarted ? "STARTED" : "NOT STARTED",
+                        sIsRunning ? "STARTED" : "NOT STARTED",
                         containsCommand ? getCommand(intent).getId() : "N/A",
                         startId)
         );
@@ -325,7 +328,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
     @Override
     public synchronized void start() {
-        if (mIsStarted) {
+        if (sIsRunning) {
             return;
         }
 
@@ -347,7 +350,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         mProvider.onCreate();
         mProvider.onConfigure(mConfig);
 
-        mIsStarted = true;
+        sIsRunning = true;
         ThreadUtils.runOnUiThreadBlocking(new Runnable() {
             @Override
             public void run() {
@@ -366,7 +369,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
     @Override
     public synchronized void stop() {
-        if (!mIsStarted) {
+        if (!sIsRunning) {
             return;
         }
 
@@ -378,12 +381,12 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         stopSelf();
 
         broadcastMessage(MSG_ON_SERVICE_STOPPED);
-        mIsStarted = false;
+        sIsRunning = false;
     }
 
     @Override
     public void startForeground() {
-        if (mIsStarted && !mIsInForeground) {
+        if (sIsRunning && !mIsInForeground) {
             Config config = getConfig();
             Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
                     config.getNotificationTitle(),
@@ -403,7 +406,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
     @Override
     public synchronized void stopForeground() {
-        if (mIsStarted && mIsInForeground) {
+        if (sIsRunning && mIsInForeground) {
             stopForeground(true);
             if (mProvider != null) {
                 mProvider.onCommand(LocationProvider.CMD_SWITCH_MODE,
@@ -428,7 +431,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         ThreadUtils.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (mIsStarted) {
+                if (sIsRunning) {
                     if (currentConfig.getStartForeground() == true && mConfig.getStartForeground() == false) {
                         stopForeground(true);
                     }
@@ -699,15 +702,13 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         return mServiceId;
     }
 
-    @Override
-    public boolean isStarted() {
-        return mIsStarted;
-    }
-
-    @Override
     public boolean isBound() {
         LocationServiceInfo info = new LocationServiceInfoImpl(this);
         return info.isBound();
+    }
+
+    public static boolean isRunning() {
+        return sIsRunning;
     }
 
     public static void setLocationTransform(@Nullable LocationTransform transform) {

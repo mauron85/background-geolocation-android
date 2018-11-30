@@ -441,7 +441,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public boolean isRunning() {
-        return ((LocationServiceInfo) mService).isStarted();
+        return ((LocationServiceProxy) mService).isRunning();
     }
 
     private void persistConfiguration(Config config) throws NullPointerException {

@@ -76,23 +76,18 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
         return serviceInfo.isStarted();
     }
 
+    public boolean isRunning() {
+        if (isStarted()) {
+            return LocationServiceImpl.isRunning();
+        }
+        return false;
+    }
+
     @Override
     public boolean isBound() {
         LocationServiceInfo serviceInfo = new LocationServiceInfoImpl(mContext);
         return serviceInfo.isBound();
     }
-
-    private ActivityManager.RunningServiceInfo getServiceInfo() {
-        String serviceName = LocationServiceImpl.class.getName();
-        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceName.equals(service.service.getClassName())) {
-                return service;
-            }
-        }
-        return null;
-    }
-
 
     private void executeIntentCommand(Intent intent) {
         mContext.startService(intent);
