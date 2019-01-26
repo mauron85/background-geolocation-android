@@ -22,9 +22,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.annotation.IntDef;
-
-import junit.framework.Assert;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -161,7 +158,7 @@ public class LocationServiceIntentBuilder {
     }
 
     public Intent build() {
-        Assert.assertNotNull("Context can not be null!", mContext);
+        assert mContext != null : "Context can not be null!";
         Intent intent = new Intent(mContext, LocationServiceImpl.class);
         if (mCommand != null) {
             intent.putExtra(KEY_COMMAND, mCommand.toBundle());
