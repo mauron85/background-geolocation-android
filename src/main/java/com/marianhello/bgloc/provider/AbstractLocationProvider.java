@@ -48,11 +48,6 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     }
 
     @Override
-    public void onCreate() {
-        toneGenerator = new android.media.ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
-    }
-
-    @Override
     public void onDestroy() {
         toneGenerator.release();
         toneGenerator = null;
@@ -163,10 +158,18 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      * @param name toneGenerator
      */
     protected void playDebugTone (int name) {
-        if (toneGenerator == null || !mConfig.isDebugging()) return;
+        if (!mConfig.isDebugging()) return;
 
-        int duration = 1000;
+        try {
+            if (toneGenerator == null) {
+                toneGenerator = new android.media.ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
+            }
 
-        toneGenerator.startTone(name, duration);
+            int duration = 1000;
+
+            toneGenerator.startTone(name, duration);
+        } catch(RuntimeException e) {
+            logger.error("Failed to create android.media.ToneGenerator", e);
+        }
     }
 }

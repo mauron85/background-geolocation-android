@@ -79,8 +79,6 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
 
     @Override
     public void onCreate() {
-        super.onCreate();
-
         locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
         alarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
 
