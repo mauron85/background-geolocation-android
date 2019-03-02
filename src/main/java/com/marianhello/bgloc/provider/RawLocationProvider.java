@@ -25,8 +25,6 @@ public class RawLocationProvider extends AbstractLocationProvider implements Loc
 
     @Override
     public void onCreate() {
-        super.onCreate();
-
         locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
     }
 
