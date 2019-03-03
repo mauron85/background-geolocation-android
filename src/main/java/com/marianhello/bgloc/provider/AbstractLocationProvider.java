@@ -49,8 +49,10 @@ public abstract class AbstractLocationProvider implements LocationProvider {
 
     @Override
     public void onDestroy() {
-        toneGenerator.release();
-        toneGenerator = null;
+        if (toneGenerator != null) {
+            toneGenerator.release();
+            toneGenerator = null;
+        }
     }
 
     @Override
