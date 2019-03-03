@@ -16,6 +16,9 @@ public class MockLocationProvider extends AbstractLocationProvider {
     }
 
     @Override
+    public void onCreate() {}
+
+    @Override
     public void onStart() {
         mIsStarted = true;
         Iterator<Location> it = mMockLocations.iterator();
