@@ -114,6 +114,7 @@ public class LocationServiceProxyTest {
         Config config = Config.getDefault();
         config.setUrl("http://locationserviceproxy.net/");
 
+        proxy.start();
         proxy.configure(config);
         Thread.sleep(4000);
         assertThat(service.getConfig().getUrl(), equalTo("http://locationserviceproxy.net/"));
@@ -126,7 +127,7 @@ public class LocationServiceProxyTest {
         assertThat(proxy.isStarted(), is(false));
         assertThat(proxy.isRunning(), is(false));
         proxy.configure(Config.getDefault());
-        assertThat(proxy.isStarted(), is(true));
+        assertThat(proxy.isStarted(), is(false));
         assertThat(proxy.isRunning(), is(false));
     }
 
