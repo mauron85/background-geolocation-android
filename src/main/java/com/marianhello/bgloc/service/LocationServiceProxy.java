@@ -67,12 +67,16 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void stopForeground() {
+        if (!isStarted()) { return; }
+
         Intent intent = mIntentBuilder.setCommand(CommandId.STOP_FOREGROUND).build();
         executeIntentCommand(intent);
     }
 
     @Override
     public void startForeground() {
+        if (!isStarted()) { return; }
+
         Intent intent = mIntentBuilder.setCommand(CommandId.START_FOREGROUND).build();
         executeIntentCommand(intent);
     }
