@@ -22,7 +22,7 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
         // https://github.com/mauron85/react-native-background-geolocation/issues/360
         // https://github.com/mauron85/cordova-plugin-background-geolocation/issues/551
         // https://github.com/mauron85/cordova-plugin-background-geolocation/issues/552
-        if (!isStarted()) { return; }
+        if (!isRunning()) { return; }
 
         Intent intent = mIntentBuilder
                 .setCommand(CommandId.CONFIGURE, config)
@@ -67,7 +67,7 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void stopForeground() {
-        if (!isStarted()) { return; }
+        if (!isRunning()) { return; }
 
         Intent intent = mIntentBuilder.setCommand(CommandId.STOP_FOREGROUND).build();
         executeIntentCommand(intent);
@@ -75,7 +75,7 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void startForeground() {
-        if (!isStarted()) { return; }
+        if (!isRunning()) { return; }
 
         Intent intent = mIntentBuilder.setCommand(CommandId.START_FOREGROUND).build();
         executeIntentCommand(intent);
