@@ -129,5 +129,6 @@ ext {
         logback: [group: 'com.github.tony19', name: 'logback-android', version: '1.1.1-9'],
         slf4j: [group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'],
         promise: [group: 'com.github.jparkie', name: 'promise', version: '1.0.3'],
+        commonsio: [group: 'commons-io', name:'commons-io', version: '2.6'],
     ]
 }
