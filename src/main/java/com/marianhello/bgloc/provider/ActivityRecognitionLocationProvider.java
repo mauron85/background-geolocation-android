@@ -47,7 +47,6 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     @Override
     public void onCreate() {
         super.onCreate();
-
         Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE);
         detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         registerReceiver(detectedActivitiesReceiver, new IntentFilter(DETECTED_ACTIVITY_UPDATE));
@@ -85,17 +84,21 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     @Override
     public void onLocationChanged(Location location) {
         logger.debug("Location change: {}", location.toString());
+        Location currentLocation = location;
+        if(mConfig.getApplyKalmanFilter()) {
+            currentLocation = applyKalmanFilter(location);
+        }
 
         if (lastActivity.getType() == DetectedActivity.STILL) {
-            handleStationary(location);
+            handleStationary(currentLocation);
             stopTracking();
             return;
         }
 
-        showDebugToast("acy:" + location.getAccuracy() + ",v:" + location.getSpeed());
+        showDebugToast("acy:" + currentLocation.getAccuracy() + ",v:" + currentLocation.getSpeed());
 
-        lastLocation = location;
-        handleLocation(location);
+        lastLocation = currentLocation;
+        handleLocation(currentLocation);
     }
 
     public void startTracking() {

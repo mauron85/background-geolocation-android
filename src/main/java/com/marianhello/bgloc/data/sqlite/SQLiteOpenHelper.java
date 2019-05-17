@@ -82,7 +82,7 @@ public class SQLiteOpenHelper extends android.database.sqlite.SQLiteOpenHelper {
                 alterSql.add(SQL_CREATE_CONFIG_TABLE);
             case 11:
                 alterSql.add("ALTER TABLE " + LocationEntry.TABLE_NAME +
-                        " ADD COLUMN " + LocationEntry.COLUMN_NAME_RADIUS + REAL_TYPE);
+                        " ADD COLUMN " + LocationEntry.COLUMN_NAME_STOP_TERMINATE + REAL_TYPE);
                 alterSql.add("ALTER TABLE " + LocationEntry.TABLE_NAME +
                         " ADD COLUMN " + LocationEntry.COLUMN_NAME_HAS_ACCURACY + INTEGER_TYPE);
                 alterSql.add("ALTER TABLE " + LocationEntry.TABLE_NAME +

@@ -63,6 +63,7 @@ public class Config implements Parcelable
     private HashMap httpHeaders;
     private Integer maxLocations;
     private LocationTemplate template;
+    private Boolean applyKalmanFilter;
 
     public Config () {
     }
@@ -95,6 +96,7 @@ public class Config implements Parcelable
         if (config.template instanceof AbstractLocationTemplate) {
             this.template = ((AbstractLocationTemplate)config.template).clone();
         }
+        this.applyKalmanFilter = config.applyKalmanFilter;
     }
 
     private Config(Parcel in) {
@@ -123,6 +125,7 @@ public class Config implements Parcelable
         Bundle bundle = in.readBundle();
         setHttpHeaders((HashMap<String, String>) bundle.getSerializable("httpHeaders"));
         setTemplate((LocationTemplate) bundle.getSerializable(AbstractLocationTemplate.BUNDLE_KEY));
+        setApplyKalmanFilter((Boolean) in.readValue(null));
     }
 
     public static Config getDefault() {
@@ -151,6 +154,7 @@ public class Config implements Parcelable
         config.httpHeaders = null;
         config.maxLocations = 10000;
         config.template = null;
+        config.applyKalmanFilter = true;
 
         return config;
     }
@@ -183,6 +187,7 @@ public class Config implements Parcelable
         out.writeString(getSyncUrl());
         out.writeInt(getSyncThreshold());
         out.writeInt(getMaxLocations());
+        out.writeValue(getApplyKalmanFilter());
         Bundle bundle = new Bundle();
         bundle.putSerializable("httpHeaders", getHttpHeaders());
         bundle.putSerializable(AbstractLocationTemplate.BUNDLE_KEY, (AbstractLocationTemplate) getTemplate());
@@ -520,6 +525,15 @@ public class Config implements Parcelable
         this.template = template;
     }
 
+    public boolean hasApplyKalmanFilter() {
+        return applyKalmanFilter != null;
+    }
+
+    public void setApplyKalmanFilter(Boolean applyKalmanFilter) { this.applyKalmanFilter = applyKalmanFilter; }
+
+    public Boolean getApplyKalmanFilter() { return applyKalmanFilter; }
+
+
     @Override
     public String toString () {
         return new StringBuffer()
@@ -547,6 +561,7 @@ public class Config implements Parcelable
                 .append(" httpHeaders=").append(getHttpHeaders().toString())
                 .append(" maxLocations=").append(getMaxLocations())
                 .append(" postTemplate=").append(hasTemplate() ? getTemplate().toString() : null)
+                .append(" applyKalmanFilter=").append(getApplyKalmanFilter())
                 .append("]")
                 .toString();
     }
@@ -638,6 +653,9 @@ public class Config implements Parcelable
         }
         if (config2.hasTemplate()) {
             merger.setTemplate(config2.getTemplate());
+        }
+        if (config2.hasApplyKalmanFilter()) {
+            merger.setApplyKalmanFilter(config2.getApplyKalmanFilter());
         }
 
         return merger;

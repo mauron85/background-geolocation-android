@@ -283,16 +283,21 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
     public void onLocationChanged(Location location) {
         logger.debug("Location change: {} isMoving={}", location.toString(), isMoving);
 
+        Location currentLocation = location;
+        if(mConfig.getApplyKalmanFilter()) {
+          currentLocation = applyKalmanFilter(location);
+        }
+
         if (!isMoving && !isAcquiringStationaryLocation && stationaryLocation==null) {
             // Perhaps our GPS signal was interupted, re-acquire a stationaryLocation now.
             setPace(false);
         }
 
-        showDebugToast( "mv:" + isMoving + ",acy:" + location.getAccuracy() + ",v:" + location.getSpeed() + ",df:" + scaledDistanceFilter);
+        showDebugToast( "mv:" + isMoving + ",acy:" + currentLocation.getAccuracy() + ",v:" + currentLocation.getSpeed() + ",df:" + scaledDistanceFilter);
 
         if (isAcquiringStationaryLocation) {
-            if (stationaryLocation == null || stationaryLocation.getAccuracy() > location.getAccuracy()) {
-                stationaryLocation = location;
+            if (stationaryLocation == null || stationaryLocation.getAccuracy() > currentLocation.getAccuracy()) {
+                stationaryLocation = currentLocation;
             }
             if (++locationAcquisitionAttempts == MAX_STATIONARY_ACQUISITION_ATTEMPTS) {
                 isAcquiringStationaryLocation = false;
@@ -309,7 +314,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
                 // Got enough samples, assume we're confident in reported speed now.  Play "woohoo" sound.
                 playDebugTone(Tone.DOODLY_DOO);
                 isAcquiringSpeed = false;
-                scaledDistanceFilter = calculateDistanceFilter(location.getSpeed());
+                scaledDistanceFilter = calculateDistanceFilter(currentLocation.getSpeed());
                 setPace(true);
             } else {
                 playDebugTone(Tone.BEEP);
@@ -319,25 +324,25 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
             playDebugTone(Tone.BEEP);
 
             // Only reset stationaryAlarm when accurate speed is detected, prevents spurious locations from resetting when stopped.
-            if ( (location.getSpeed() >= 1) && (location.getAccuracy() <= mConfig.getStationaryRadius()) ) {
+            if ( (currentLocation.getSpeed() >= 1) && (currentLocation.getAccuracy() <= mConfig.getStationaryRadius()) ) {
                 resetStationaryAlarm();
             }
             // Calculate latest distanceFilter, if it changed by 5 m/s, we'll reconfigure our pace.
-            Integer newDistanceFilter = calculateDistanceFilter(location.getSpeed());
+            Integer newDistanceFilter = calculateDistanceFilter(currentLocation.getSpeed());
             if (newDistanceFilter != scaledDistanceFilter.intValue()) {
                 logger.info("Updating distanceFilter: new={} old={}", newDistanceFilter, scaledDistanceFilter);
                 scaledDistanceFilter = newDistanceFilter;
                 setPace(true);
             }
-            if (lastLocation != null && location.distanceTo(lastLocation) < mConfig.getDistanceFilter()) {
+            if (lastLocation != null && currentLocation.distanceTo(lastLocation) < mConfig.getDistanceFilter()) {
                 return;
             }
         } else if (stationaryLocation != null) {
             return;
         }
         // Go ahead and cache, push to server
-        lastLocation = location;
-        handleLocation(location);
+        lastLocation = currentLocation;
+        handleLocation(currentLocation);
     }
 
     public void resetStationaryAlarm() {

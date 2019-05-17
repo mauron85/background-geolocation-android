@@ -87,8 +87,13 @@ public class RawLocationProvider extends AbstractLocationProvider implements Loc
     public void onLocationChanged(Location location) {
         logger.debug("Location change: {}", location.toString());
 
-        showDebugToast("acy:" + location.getAccuracy() + ",v:" + location.getSpeed());
-        handleLocation(location);
+        Location currentLocation = location;
+        if(mConfig.getApplyKalmanFilter()) {
+            currentLocation = applyKalmanFilter(location);
+        }
+
+        showDebugToast("acy:" + currentLocation.getAccuracy() + ",v:" + currentLocation.getSpeed());
+        handleLocation(currentLocation);
     }
 
     @Override
