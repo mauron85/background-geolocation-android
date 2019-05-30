@@ -75,7 +75,7 @@ android {
     defaultConfig {
         resValue "string", resourcePrefix + "account_name", 'Locations'
         resValue "string", resourcePrefix + "account_type", applicationId + '.mauron85.bgloc.account'
-        resValue "string", resourcePrefix + "content_authority", applicationId + '.mauron85.bgloc.provider'
+        resValue "string", resourcePrefix + "content_authority", applicationId + '.mauron85.bgloc.providers'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         minSdkVersion project.ext.getMinSdkVersion()
         versionCode 1
