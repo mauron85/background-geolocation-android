@@ -1,6 +1,6 @@
-Background Geolocation for Android
+# For for Background Geolocation for Android
 
-[![CircleCI](https://circleci.com/gh/mauron85/background-geolocation-android/tree/master.svg?style=shield)](https://circleci.com/gh/mauron85/background-geolocation-android/tree/master)
+* mainly modified to remove syncing aspects for those projects that don't need that.
 
 used by:
 
