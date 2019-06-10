@@ -9,7 +9,6 @@ This is a new class
 
 package com.marianhello.bgloc.service;
 
-import android.accounts.Account;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Service;
