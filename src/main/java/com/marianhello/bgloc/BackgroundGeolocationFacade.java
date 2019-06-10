@@ -1,7 +1,7 @@
 package com.marianhello.bgloc;
 
 import android.Manifest;
-import android.accounts.Account;
+
 import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -31,8 +31,6 @@ import com.marianhello.bgloc.service.LocationServiceImpl;
 import com.marianhello.bgloc.service.LocationServiceInfo;
 import com.marianhello.bgloc.service.LocationServiceProxy;
 import com.marianhello.bgloc.service.LocationTransform;
-import com.marianhello.bgloc.sync.AccountHelper;
-import com.marianhello.bgloc.sync.SyncService;
 import com.marianhello.logging.DBLogReader;
 import com.marianhello.logging.LogEntry;
 import com.marianhello.logging.LoggerManager;
@@ -393,11 +391,7 @@ public class BackgroundGeolocationFacade {
      * and sync locations to defined syncUrl
      */
     public void forceSync() {
-        logger.debug("Sync locations forced");
-        ResourceResolver resolver = ResourceResolver.newInstance(getContext());
-        Account syncAccount = AccountHelper.CreateSyncAccount(getContext(), resolver.getAccountName(),
-                resolver.getAccountType());
-        SyncService.sync(syncAccount, resolver.getAuthority(), true);
+        logger.debug("Sync locations forced");          
     }
 
     public int getAuthorizationStatus() {

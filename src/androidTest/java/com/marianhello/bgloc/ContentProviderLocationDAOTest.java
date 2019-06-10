@@ -217,32 +217,7 @@ public class ContentProviderLocationDAOTest extends LocationProviderTestCase {
         ArrayList<BackgroundLocation> locations = new ArrayList(dao.getAllLocations());
         assertEquals(Long.valueOf(1000L), locations.get(0).getBatchStartMillis());
     }
-
-    @Test
-    public void testGetLocationsForSyncCount() {
-        LocationDAO dao = new ContentProviderLocationDAO(getContext());
-
-        BackgroundLocation location;
-        for (int i = 1; i < 100; i++) {
-            location = new BackgroundLocation();
-            if ((i % 3) == 0) {
-                // exactly 33 locations (out of 99) should be eligible for sync for given batch id 1000
-                location.setBatchStartMillis(1000L);
-                location.setStatus(BackgroundLocation.SYNC_PENDING);
-            } else if ((i % 2) == 0) {
-                // exactly 33 locations as deleted
-                location.setStatus(BackgroundLocation.DELETED);
-            } else {
-                location.setStatus(BackgroundLocation.SYNC_PENDING);
-            }
-            dao.persistLocation(location);
-        }
-
-        assertEquals(66, dao.getValidLocations().size());
-        assertEquals(99, dao.getAllLocations().size());
-        assertEquals(66L, dao.getLocationsForSyncCount(10001L));
-        assertEquals(33L, dao.getLocationsForSyncCount(1000L));
-    }
+    
 
     @Test
     public void testGetLocationById() {
@@ -409,28 +384,4 @@ public class ContentProviderLocationDAOTest extends LocationProviderTestCase {
         assertEquals(2, dao.getLocationsForSyncCount(0));
     }
 
-    @Test
-    public void testPersistLocationForSync() {
-        LocationDAO dao = new ContentProviderLocationDAO(getContext());
-
-        BackgroundLocation location = new BackgroundLocation();
-        location.setProvider("fake");
-        location.setAccuracy(200);
-        location.setAltitude(900);
-        location.setBearing(2);
-        location.setLatitude(40.21);
-        location.setLongitude(23.45);
-        location.setSpeed(20);
-        location.setProvider("test");
-        location.setTime(1000);
-
-        long locationId = dao.persistLocation(location);
-        location.setLocationId(locationId);
-        assertEquals(1, dao.getUnpostedLocationsCount());
-        assertEquals(0, dao.getLocationsForSyncCount(0));
-
-        dao.persistLocationForSync(location, 100);
-        assertEquals(0, dao.getUnpostedLocationsCount());
-        assertEquals(1, dao.getLocationsForSyncCount(0));
-    }
 }

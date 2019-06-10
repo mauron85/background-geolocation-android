@@ -36,7 +36,6 @@ import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.ConnectivityListener;
 import com.marianhello.bgloc.NotificationHelper;
 import com.marianhello.bgloc.PluginException;
-import com.marianhello.bgloc.PostLocationTask;
 import com.marianhello.bgloc.ResourceResolver;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
@@ -51,8 +50,7 @@ import com.marianhello.bgloc.headless.Task;
 import com.marianhello.bgloc.provider.LocationProvider;
 import com.marianhello.bgloc.provider.LocationProviderFactory;
 import com.marianhello.bgloc.provider.ProviderDelegate;
-import com.marianhello.bgloc.sync.AccountHelper;
-import com.marianhello.bgloc.sync.SyncService;
+
 import com.marianhello.logging.LoggerManager;
 import com.marianhello.logging.UncaughtExceptionLogger;
 
@@ -106,7 +104,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     private ResourceResolver mResolver;
     private Config mConfig;
     private LocationProvider mProvider;
-    private Account mSyncAccount;
+    
 
     private org.slf4j.Logger logger;
 
@@ -114,7 +112,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     private HandlerThread mHandlerThread;
     private ServiceHandler mServiceHandler;
     private LocationDAO mLocationDAO;
-    private PostLocationTask mPostLocationTask;
+    
     private String mHeadlessFunction;
     private HeadlessTaskRunner mHeadlessTaskRunner;
 
@@ -184,39 +182,9 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         // An Android service handler is a handler running on a specific background thread.
         mServiceHandler = new ServiceHandler(mHandlerThread.getLooper());
 
-        mResolver = ResourceResolver.newInstance(this);
-
-        mSyncAccount = AccountHelper.CreateSyncAccount(this, mResolver.getAccountName(),
-                mResolver.getAccountType());
-
-        String authority = mResolver.getAuthority();
-        ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
-        ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
+       
 
         mLocationDAO = DAOFactory.createLocationDAO(this);
-
-        mPostLocationTask = new PostLocationTask(mLocationDAO,
-                new PostLocationTask.PostLocationTaskListener() {
-            @Override
-            public void onRequestedAbortUpdates() {
-                handleRequestedAbortUpdates();
-            }
-
-            @Override
-            public void onHttpAuthorizationUpdates() {
-                handleHttpAuthorizationUpdates();
-            }
-
-            @Override
-            public void onSyncRequested() {
-                SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
-            }
-        }, new ConnectivityListener() {
-            @Override
-            public boolean hasConnectivity() {
-                return isNetworkAvailable();
-            }
-        });
 
         registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         NotificationHelper.registerServiceChannel(this);
@@ -239,9 +207,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
             }
         }
 
-        if (mPostLocationTask != null) {
-            mPostLocationTask.shutdown();
-        }
+        
 
 
         unregisterReceiver(connectivityChangeReceiver);
@@ -340,8 +306,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
         logger.debug("Will start service with: {}", mConfig.toString());
 
-        mPostLocationTask.setConfig(mConfig);
-        mPostLocationTask.clearQueue();
+        
 
         LocationProviderFactory spf = sLocationProviderFactory != null
                 ? sLocationProviderFactory : new LocationProviderFactory(this);
@@ -426,7 +391,6 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         final Config currentConfig = mConfig;
         mConfig = config;
 
-        mPostLocationTask.setConfig(mConfig);
 
         ThreadUtils.runOnUiThread(new Runnable() {
             @Override
@@ -528,7 +492,6 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
             }
         });
 
-        postLocation(location);
     }
 
     @Override
@@ -558,7 +521,6 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
             }
         });
 
-        postLocation(location);
     }
 
     @Override
@@ -667,9 +629,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         return location;
     }
 
-    private void postLocation(BackgroundLocation location) {
-        mPostLocationTask.add(location);
-    }
+   
 
     public void handleRequestedAbortUpdates() {
         broadcastMessage(MSG_ON_ABORT_REQUESTED);
@@ -686,8 +646,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         @Override
         public void onReceive(Context context, Intent intent) {
             boolean hasConnectivity = isNetworkAvailable();
-            mPostLocationTask.setHasConnectivity(hasConnectivity);
-            logger.info("Network condition changed has connectivity: {}", hasConnectivity);
+           logger.info("Network condition changed has connectivity: {}", hasConnectivity);
         }
     };
 
