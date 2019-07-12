@@ -23,6 +23,9 @@ ext {
         if (findProject('..:app') != null) {
             applicationId = project('..:app').android.defaultConfig.applicationId
         }
+        if (rootProject.hasProperty('applicationId')) {
+            applicationId = rootProject.applicationId
+        }
         return applicationId
     }
 
