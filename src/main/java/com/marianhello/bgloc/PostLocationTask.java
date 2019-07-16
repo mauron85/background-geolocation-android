@@ -91,7 +91,7 @@ public class PostLocationTask {
     }
 
     public void shutdown() {
-        shutdown(60);
+        shutdown(0);
     }
 
     public void shutdown(int waitSeconds) {
