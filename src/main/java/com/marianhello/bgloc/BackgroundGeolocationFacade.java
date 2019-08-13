@@ -245,9 +245,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public void pause() {
-        if (getConfig().getStartForeground()) {
-            mService.startForeground();
-        }
+        mService.startForeground();
     }
 
     public void resume() {
