@@ -25,7 +25,7 @@ import android.os.Bundle;
 
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.provider.AbstractLocationProvider;
-import com.marianhello.utils.Tone;
+import com.marianhello.utils.ToneGenerator.Tone;
 
 import java.util.List;
 

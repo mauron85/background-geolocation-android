@@ -15,7 +15,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.media.AudioManager;
-import android.media.ToneGenerator;
 import android.provider.Settings;
 import android.widget.Toast;
 
@@ -25,7 +24,8 @@ import com.marianhello.bgloc.PluginException;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.logging.LoggerManager;
-import com.marianhello.utils.Tone;
+import com.marianhello.utils.ToneGenerator;
+import com.marianhello.utils.ToneGenerator.Tone;
 
 /**
  * AbstractLocationProvider
@@ -49,7 +49,7 @@ public abstract class AbstractLocationProvider implements LocationProvider {
 
     @Override
     public void onCreate() {
-        toneGenerator = new android.media.ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
+        toneGenerator = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
     }
 
     @Override
@@ -166,7 +166,6 @@ public abstract class AbstractLocationProvider implements LocationProvider {
         if (toneGenerator == null || !mConfig.isDebugging()) return;
 
         int duration = 1000;
-
         toneGenerator.startTone(name, duration);
     }
 }
