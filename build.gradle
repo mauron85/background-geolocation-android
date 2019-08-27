@@ -22,6 +22,7 @@ def oreoDependencies = [
     [configuration: "implementation", dependency: libs.logback],
     [configuration: "implementation", dependency: libs.slf4j],
     [configuration: "implementation", dependency: libs.promise],
+    [configuration: "implementation", dependency: libs.commonsio],
 ]
 
 def preoreoDependencies = [
@@ -40,6 +41,7 @@ def preoreoDependencies = [
     [configuration: "compile", dependency: libs.logback],
     [configuration: "compile", dependency: libs.slf4j],
     [configuration: "compile", dependency: libs.promise],
+    [configuration: "compile", dependency: libs.commonsio],
 ]
 
 buildscript {
