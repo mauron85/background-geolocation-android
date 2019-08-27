@@ -30,6 +30,7 @@ import java.lang.annotation.RetentionPolicy;
 @IntDef({
         CommandId.INVALID,
         CommandId.START,
+        CommandId.START_FOREGROUND_SERVICE,
         CommandId.STOP,
         CommandId.STOP_FOREGROUND,
         CommandId.START_FOREGROUND,
@@ -47,6 +48,7 @@ import java.lang.annotation.RetentionPolicy;
     int CONFIGURE = 4;
     int REGISTER_HEADLESS_TASK = 5;
     int START_HEADLESS_TASK = 6;
+    int START_FOREGROUND_SERVICE = 7;
 }
 
 public class LocationServiceIntentBuilder {

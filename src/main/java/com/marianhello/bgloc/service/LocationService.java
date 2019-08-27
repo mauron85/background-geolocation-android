@@ -4,6 +4,7 @@ import com.marianhello.bgloc.Config;
 
 public interface LocationService {
     void start();
+    void startForegroundService();
     void stop();
     void startForeground();
     void stopForeground();

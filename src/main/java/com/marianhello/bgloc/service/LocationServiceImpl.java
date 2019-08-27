@@ -197,21 +197,21 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
         mPostLocationTask = new PostLocationTask(mLocationDAO,
                 new PostLocationTask.PostLocationTaskListener() {
-            @Override
-            public void onRequestedAbortUpdates() {
-                handleRequestedAbortUpdates();
-            }
+                    @Override
+                    public void onRequestedAbortUpdates() {
+                        handleRequestedAbortUpdates();
+                    }
 
-            @Override
-            public void onHttpAuthorizationUpdates() {
-                handleHttpAuthorizationUpdates();
-            }
+                    @Override
+                    public void onHttpAuthorizationUpdates() {
+                        handleHttpAuthorizationUpdates();
+                    }
 
-            @Override
-            public void onSyncRequested() {
-                SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
-            }
-        }, new ConnectivityListener() {
+                    @Override
+                    public void onSyncRequested() {
+                        SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
+                    }
+                }, new ConnectivityListener() {
             @Override
             public boolean hasConnectivity() {
                 return isNetworkAvailable();
@@ -302,6 +302,9 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
                 case CommandId.START:
                     start();
                     break;
+                case CommandId.START_FOREGROUND_SERVICE:
+                    startForegroundService();
+                    break;
                 case CommandId.STOP:
                     stop();
                     break;
@@ -365,6 +368,12 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         bundle.putInt("action", MSG_ON_SERVICE_STARTED);
         bundle.putLong("serviceId", mServiceId);
         broadcastMessage(bundle);
+    }
+
+    @Override
+    public synchronized void startForegroundService() {
+        start();
+        startForeground();
     }
 
     @Override

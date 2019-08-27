@@ -1,8 +1,8 @@
 package com.marianhello.bgloc.service;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
 import com.marianhello.bgloc.Config;
 
@@ -57,6 +57,16 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 //        intent.addFlags(Intent.FLAG_FROM_BACKGROUND);
         // start service to keep service running even if no clients are bound to it
         executeIntentCommand(intent);
+    }
+
+    @Override
+    public void startForegroundService() {
+        Intent intent = mIntentBuilder.setCommand(CommandId.START_FOREGROUND_SERVICE).build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mContext.startForegroundService(intent);
+        } else {
+            mContext.startService(intent);
+        }
     }
 
     @Override

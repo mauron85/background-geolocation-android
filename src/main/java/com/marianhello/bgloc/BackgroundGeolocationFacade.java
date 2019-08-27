@@ -59,6 +59,7 @@ public class BackgroundGeolocationFacade {
 
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
+    private boolean mIsPaused = false;
 
     private Config mConfig;
     private final Context mContext;
@@ -166,7 +167,7 @@ public class BackgroundGeolocationFacade {
 
                     if (mDelegate != null) {
                         mDelegate.onHttpAuthorization();
-                    } 
+                    }
 
                     return;
                 }
@@ -245,10 +246,12 @@ public class BackgroundGeolocationFacade {
     }
 
     public void pause() {
+        mIsPaused = true;
         mService.startForeground();
     }
 
     public void resume() {
+        mIsPaused = false;
         if (!getConfig().getStartForeground()) {
             mService.stopForeground();
         }
@@ -432,7 +435,11 @@ public class BackgroundGeolocationFacade {
 
     private void startBackgroundService() {
         logger.info("Attempt to start bg service");
-        mService.start();
+        if (mIsPaused) {
+            mService.startForegroundService();
+        } else {
+            mService.start();
+        }
     }
 
     private void stopBackgroundService() {
