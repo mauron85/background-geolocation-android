@@ -429,7 +429,7 @@ public class BackgroundGeolocationFacade {
     }
 
     public void registerHeadlessTask(final String taskRunnerClass) {
-        logger.info("Registering headless task");
+        logger.info("Registering headless task: {}", taskRunnerClass);
         mService.registerHeadlessTask(taskRunnerClass);
     }
 

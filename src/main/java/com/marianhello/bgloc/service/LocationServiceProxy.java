@@ -31,9 +31,9 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
     }
 
     @Override
-    public void registerHeadlessTask(String jsFunction) {
+    public void registerHeadlessTask(String taskRunnerClass) {
         Intent intent = mIntentBuilder
-                .setCommand(CommandId.REGISTER_HEADLESS_TASK, jsFunction)
+                .setCommand(CommandId.REGISTER_HEADLESS_TASK, taskRunnerClass)
                 .build();
         executeIntentCommand(intent);
     }

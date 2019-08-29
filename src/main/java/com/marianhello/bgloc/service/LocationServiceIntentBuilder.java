@@ -116,7 +116,7 @@ public class LocationServiceIntentBuilder {
             int argumentType = bundle.getInt(KEY_COMMAND_ARGUMENT_TYPE);
 
             if (argumentType == ARGUMENT_TYPE_STRING) {
-                return new Command(commandId, bundle.getString(KEY_COMMAND_ARGUMENT_TYPE));
+                return new Command(commandId, bundle.getString(KEY_COMMAND_ARGUMENT));
             } else if (argumentType == ARGUMENT_TYPE_PARCELABLE) {
                 // Important: don't remove Parcelable cast
                 // required for Java 1.8 compatibility
