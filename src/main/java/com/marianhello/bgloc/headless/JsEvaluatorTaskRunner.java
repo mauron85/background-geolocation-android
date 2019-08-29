@@ -5,13 +5,13 @@ import android.util.Log;
 
 import com.evgenii.jsevaluator.JsEvaluator;
 
-public class HeadlessTaskRunner {
+public class JsEvaluatorTaskRunner implements TaskRunner {
     private JsEvaluator mJsEvaluator;
     private String mJsFunction;
 
     public static String BUNDLE_KEY = "JS";
 
-    public HeadlessTaskRunner(Context context) {
+    public JsEvaluatorTaskRunner(Context context) {
         mJsEvaluator = new JsEvaluator(context);
     }
 
@@ -19,6 +19,7 @@ public class HeadlessTaskRunner {
         mJsFunction = jsFunction;
     }
 
+    @Override
     public void runTask(Task task) {
         if (mJsFunction == null) {
             task.onError("Cannot run task due missing jsEvaluator. Did you called setFunction?");

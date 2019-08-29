@@ -44,7 +44,7 @@ import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
 import com.marianhello.bgloc.headless.ActivityTask;
-import com.marianhello.bgloc.headless.HeadlessTaskRunner;
+import com.marianhello.bgloc.headless.JsEvaluatorTaskRunner;
 import com.marianhello.bgloc.headless.LocationTask;
 import com.marianhello.bgloc.headless.StationaryTask;
 import com.marianhello.bgloc.headless.Task;
@@ -116,7 +116,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     private LocationDAO mLocationDAO;
     private PostLocationTask mPostLocationTask;
     private String mHeadlessFunction;
-    private HeadlessTaskRunner mHeadlessTaskRunner;
+    private JsEvaluatorTaskRunner mHeadlessTaskRunner;
 
     private long mServiceId = -1;
     private static boolean sIsRunning = false;
@@ -491,7 +491,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     @Override
     public synchronized  void startHeadlessTask() {
         if (mHeadlessFunction != null) {
-            mHeadlessTaskRunner = new HeadlessTaskRunner(this);
+            mHeadlessTaskRunner = new JsEvaluatorTaskRunner(this);
             mHeadlessTaskRunner.setFunction(mHeadlessFunction);
         }
     }
