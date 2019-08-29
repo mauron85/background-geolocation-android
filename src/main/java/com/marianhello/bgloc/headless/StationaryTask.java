@@ -1,5 +1,7 @@
 package com.marianhello.bgloc.headless;
 
+import android.os.Bundle;
+
 import com.marianhello.bgloc.data.BackgroundLocation;
 
 import org.json.JSONException;
@@ -17,7 +19,12 @@ public abstract class StationaryTask extends Task {
     }
 
     @Override
-    String getParams() {
+    public Bundle getBundle() {
+        return null;
+    }
+
+    @Override
+    public String toString() {
         if (mLocation == null) {
             return null;
         }

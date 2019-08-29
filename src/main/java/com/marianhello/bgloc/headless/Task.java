@@ -1,8 +1,8 @@
 package com.marianhello.bgloc.headless;
 
-import com.evgenii.jsevaluator.interfaces.JsCallback;
+import android.os.Bundle;
 
 public abstract class Task implements JsCallback {
-    abstract String getName();
-    abstract String getParams();
+    public abstract String getName();
+    public abstract Bundle getBundle();
 }

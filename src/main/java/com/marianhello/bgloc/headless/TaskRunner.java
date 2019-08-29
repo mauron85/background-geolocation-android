@@ -1,5 +1,5 @@
 package com.marianhello.bgloc.headless;
 
-interface TaskRunner {
+public interface TaskRunner {
     void runTask(Task task);
 }
