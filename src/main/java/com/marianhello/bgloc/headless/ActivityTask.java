@@ -20,7 +20,15 @@ public abstract class ActivityTask extends Task {
 
     @Override
     public Bundle getBundle() {
-        return null;
+        Bundle bundle = new Bundle();
+        Bundle params = new Bundle();
+
+        params.putInt("confidence", mActivity.getConfidence());
+        params.putString("type", BackgroundActivity.getActivityString(mActivity.getType()));
+
+        bundle.putString("name", getName());
+        bundle.putBundle("params", params);
+        return bundle;
     }
 
     @Override

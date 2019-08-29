@@ -6,11 +6,9 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 
 import org.json.JSONException;
 
-public abstract class StationaryTask extends Task {
-    private BackgroundLocation mLocation;
-
+public abstract class StationaryTask extends LocationTask {
     public StationaryTask(BackgroundLocation location) {
-        mLocation = location;
+        super(location);
     }
 
     @Override
@@ -20,21 +18,8 @@ public abstract class StationaryTask extends Task {
 
     @Override
     public Bundle getBundle() {
-        return null;
-    }
+        Bundle bundle = super.getBundle();
 
-    @Override
-    public String toString() {
-        if (mLocation == null) {
-            return null;
-        }
-
-        try {
-            return mLocation.toJSONObject().toString();
-        } catch (JSONException e) {
-            onError("Error processing params: " + e.getMessage());
-        }
-
-        return null;
+        return bundle;
     }
 }

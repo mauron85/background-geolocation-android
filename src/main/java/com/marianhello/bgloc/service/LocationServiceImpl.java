@@ -48,6 +48,7 @@ import com.marianhello.bgloc.headless.LocationTask;
 import com.marianhello.bgloc.headless.StationaryTask;
 import com.marianhello.bgloc.headless.Task;
 import com.marianhello.bgloc.headless.TaskRunner;
+import com.marianhello.bgloc.headless.TaskRunnerFactory;
 import com.marianhello.bgloc.provider.LocationProvider;
 import com.marianhello.bgloc.provider.LocationProviderFactory;
 import com.marianhello.bgloc.provider.ProviderDelegate;
@@ -115,7 +116,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     private ServiceHandler mServiceHandler;
     private LocationDAO mLocationDAO;
     private PostLocationTask mPostLocationTask;
-    private String mHeadlessFunction;
+    private String mHeadlessTaskRunnerClass;
     private TaskRunner mHeadlessTaskRunner;
 
     private long mServiceId = -1;
@@ -483,16 +484,20 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     }
 
     @Override
-    public synchronized void registerHeadlessTask(String jsFunction) {
+    public synchronized void registerHeadlessTask(String taskRunnerClass) {
         logger.debug("Registering headless task");
-        mHeadlessFunction = jsFunction;
+        mHeadlessTaskRunnerClass = taskRunnerClass;
     }
 
     @Override
     public synchronized void startHeadlessTask() {
-        if (mHeadlessFunction != null) {
-            mHeadlessTaskRunner = new JsEvaluatorTaskRunner(this);
-            mHeadlessTaskRunner.setFunction(mHeadlessFunction);
+        if (mHeadlessTaskRunnerClass != null) {
+            TaskRunnerFactory trf = new TaskRunnerFactory(this);
+            try {
+                mHeadlessTaskRunner = trf.getTaskRunner(mHeadlessTaskRunnerClass);
+            } catch (Exception e) {
+                logger.error("Headless task start failed: {}", e.getMessage());
+            }
         }
     }
 

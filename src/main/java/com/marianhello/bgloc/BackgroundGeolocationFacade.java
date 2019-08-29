@@ -428,9 +428,9 @@ public class BackgroundGeolocationFacade {
         }
     }
 
-    public void registerHeadlessTask(final String jsFunction) {
+    public void registerHeadlessTask(final String taskRunnerClass) {
         logger.info("Registering headless task");
-        mService.registerHeadlessTask(jsFunction);
+        mService.registerHeadlessTask(taskRunnerClass);
     }
 
     private void startBackgroundService() {
