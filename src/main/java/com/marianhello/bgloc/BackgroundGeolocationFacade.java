@@ -252,6 +252,7 @@ public class BackgroundGeolocationFacade {
 
     public void resume() {
         mIsPaused = false;
+        mService.stopHeadlessTask();
         if (!getConfig().getStartForeground()) {
             mService.stopForeground();
         }

@@ -23,7 +23,6 @@ public abstract class LocationTask extends Task {
         Bundle bundle = new Bundle();
         Bundle params = new Bundle();
 
-        params.putLong("id", mLocation.getLocationId());
         params.putString("provider", mLocation.getProvider());
         params.putInt("locationProvider", mLocation.getLocationProvider());
         params.putLong("time", mLocation.getTime());

@@ -47,6 +47,14 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
     }
 
     @Override
+    public void stopHeadlessTask() {
+        Intent intent = mIntentBuilder
+                .setCommand(CommandId.STOP_HEADLESS_TASK)
+                .build();
+        executeIntentCommand(intent);
+    }
+
+    @Override
     public void executeProviderCommand(int command, int arg) {
         // TODO
     }

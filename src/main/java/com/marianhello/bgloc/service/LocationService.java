@@ -11,5 +11,6 @@ public interface LocationService {
     void configure(Config config);
     void registerHeadlessTask(String jsFunction);
     void startHeadlessTask();
+    void stopHeadlessTask();
     void executeProviderCommand(int command, int arg);
 }

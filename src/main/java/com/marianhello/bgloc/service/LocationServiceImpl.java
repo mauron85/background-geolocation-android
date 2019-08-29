@@ -43,6 +43,7 @@ import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
 import com.marianhello.bgloc.data.LocationDAO;
+import com.marianhello.bgloc.headless.AbstractTaskRunner;
 import com.marianhello.bgloc.headless.ActivityTask;
 import com.marianhello.bgloc.headless.LocationTask;
 import com.marianhello.bgloc.headless.StationaryTask;
@@ -324,6 +325,9 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
                 case CommandId.START_HEADLESS_TASK:
                     startHeadlessTask();
                     break;
+                case CommandId.STOP_HEADLESS_TASK:
+                    stopHeadlessTask();
+                    break;
             }
         } catch (Exception e) {
             logger.error("processCommand: exception", e);
@@ -492,13 +496,19 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     @Override
     public synchronized void startHeadlessTask() {
         if (mHeadlessTaskRunnerClass != null) {
-            TaskRunnerFactory trf = new TaskRunnerFactory(this);
+            TaskRunnerFactory trf = new TaskRunnerFactory();
             try {
                 mHeadlessTaskRunner = trf.getTaskRunner(mHeadlessTaskRunnerClass);
+                ((AbstractTaskRunner) mHeadlessTaskRunner).setContext(this);
             } catch (Exception e) {
                 logger.error("Headless task start failed: {}", e.getMessage());
             }
         }
+    }
+
+    @Override
+    public synchronized void stopHeadlessTask() {
+        mHeadlessTaskRunner = null;
     }
 
     @Override
