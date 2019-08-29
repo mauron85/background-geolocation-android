@@ -19,7 +19,7 @@ import com.marianhello.bgloc.provider.MockLocationProvider;
 import com.marianhello.bgloc.provider.TestLocationProviderFactory;
 import com.marianhello.bgloc.service.LocationServiceImpl;
 import com.marianhello.bgloc.service.LocationServiceIntentBuilder;
-import com.marianhello.bgloc.service.LocationTransform;
+import com.marianhello.bgloc.data.LocationTransform;
 
 import org.junit.After;
 import org.junit.Before;
