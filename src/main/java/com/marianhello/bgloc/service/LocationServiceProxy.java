@@ -40,6 +40,8 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void startHeadlessTask() {
+        if (!isStarted()) { return; }
+
         Intent intent = mIntentBuilder
                 .setCommand(CommandId.START_HEADLESS_TASK)
                 .build();
@@ -48,6 +50,8 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void stopHeadlessTask() {
+        if (!isStarted()) { return; }
+
         Intent intent = mIntentBuilder
                 .setCommand(CommandId.STOP_HEADLESS_TASK)
                 .build();
