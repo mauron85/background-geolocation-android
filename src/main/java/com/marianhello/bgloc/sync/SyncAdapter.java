@@ -16,10 +16,9 @@ import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.HttpPostService;
-import com.marianhello.bgloc.service.LocationServiceImpl;
-import com.marianhello.bgloc.NotificationHelper;
 import com.marianhello.bgloc.data.ConfigurationDAO;
 import com.marianhello.bgloc.data.DAOFactory;
+import com.marianhello.bgloc.service.LocationServiceImpl;
 import com.marianhello.logging.LoggerManager;
 
 import org.json.JSONException;
@@ -36,6 +35,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
 
     private static final int NOTIFICATION_ID = 666;
 
+    ContentResolver contentResolver;
     private ConfigurationDAO configDAO;
     private NotificationManager notificationManager;
     private BatchManager batchManager;
@@ -64,9 +64,14 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
         super(context, autoInitialize);
         logger = LoggerManager.getLogger(SyncAdapter.class);
 
+        /*
+         * If your app uses a content resolver, get an instance of it
+         * from the incoming Context
+         */
+        contentResolver = context.getContentResolver();
         configDAO = DAOFactory.createConfigurationDAO(context);
-        batchManager = new BatchManager(context);
-        notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        batchManager = new BatchManager(this.getContext());
+        notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
 
         NotificationHelper.registerSyncChannel(context);
     }
@@ -139,7 +144,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
         NotificationCompat.Builder builder = null;
 
         if (notificationsEnabled) {
-            builder = new NotificationCompat.Builder(getContext());
+            builder = new NotificationCompat.Builder(getContext(), NotificationHelper.SYNC_CHANNEL_ID);
             builder.setOngoing(true);
             builder.setContentTitle("Syncing locations");
             builder.setContentText("Sync in progress");
@@ -210,7 +215,7 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
         logger.debug("Syncing progress: {} updatedAt: {}", progress, System.currentTimeMillis());
 
         if (notificationsEnabled) {
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext());
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), NotificationHelper.SYNC_CHANNEL_ID);
             builder.setOngoing(true);
             builder.setContentTitle("Syncing locations");
             builder.setContentText("Sync in progress");

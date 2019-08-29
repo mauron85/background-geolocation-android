@@ -1,4 +1,4 @@
-package com.marianhello.bgloc;
+package com.marianhello.bgloc.sync;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -12,6 +12,7 @@ import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 
+import com.marianhello.bgloc.ResourceResolver;
 import com.marianhello.logging.LoggerManager;
 
 public class NotificationHelper {

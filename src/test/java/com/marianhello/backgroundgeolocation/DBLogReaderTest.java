@@ -1,6 +1,6 @@
 package com.marianhello.backgroundgeolocation;
 
-import android.test.suitebuilder.annotation.SmallTest;
+import android.support.test.filters.SmallTest;
 
 import com.marianhello.logging.DBLogReader;
 

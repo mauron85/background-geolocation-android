@@ -1,7 +1,7 @@
 package com.marianhello.backgroundgeolocation;
 
 import android.os.Build;
-import android.test.suitebuilder.annotation.SmallTest;
+import android.support.test.filters.SmallTest;
 
 import com.marianhello.bgloc.data.BackgroundLocation;
 
