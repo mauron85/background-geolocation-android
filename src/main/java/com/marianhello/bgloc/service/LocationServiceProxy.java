@@ -91,7 +91,7 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
         Bundle actionBundle = new Bundle();
         Intent actionIntent = new Intent(LocationServiceImpl.ACTION_BROADCAST);
         actionBundle.putInt("action", LocationServiceImpl.MSG_ON_SERVICE_STOPPED);
-        intent.putExtras(actionBundle);
+        actionIntent.putExtras(actionBundle);
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(actionIntent);
     }
 
