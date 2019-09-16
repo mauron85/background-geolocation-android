@@ -3,6 +3,8 @@ package com.marianhello.bgloc.service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.marianhello.bgloc.Config;
 
@@ -83,8 +85,14 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void stop() {
-        Intent intent = mIntentBuilder.setCommand(CommandId.STOP).build();
-        executeIntentCommand(intent);
+        Intent intent = mIntentBuilder.build();
+        mContext.stopService(intent);
+
+        Bundle actionBundle = new Bundle();
+        Intent actionIntent = new Intent(LocationServiceImpl.ACTION_BROADCAST);
+        actionBundle.putInt("action", LocationServiceImpl.MSG_ON_SERVICE_STOPPED);
+        intent.putExtras(actionBundle);
+        LocalBroadcastManager.getInstance(mContext).sendBroadcast(actionIntent);
     }
 
     @Override
