@@ -83,6 +83,8 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
 
     @Override
     public void stop() {
+        if (!isStarted()) { return; }
+
         Intent intent = mIntentBuilder.setCommand(CommandId.STOP).build();
         executeIntentCommand(intent);
     }
