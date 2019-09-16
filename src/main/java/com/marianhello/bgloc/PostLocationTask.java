@@ -9,6 +9,7 @@ import org.json.JSONException;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -80,14 +81,19 @@ public class PostLocationTask {
             return;
         }
 
-        location.setLocationId(mLocationDAO.persistLocation(location));
+        long locationId = mLocationDAO.persistLocation(location);
+        location.setLocationId(locationId);
 
-        mExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                post(location);
-            }
-        });
+        try {
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    post(location);
+                }
+            });
+        } catch (RejectedExecutionException ex) {
+            mLocationDAO.updateLocationForSync(locationId);
+        }
     }
 
     public void shutdown() {
