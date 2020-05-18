@@ -155,7 +155,8 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     }
 
     public Boolean hasMockLocationsEnabled() {
-        return Settings.Secure.getString(mContext.getContentResolver(), android.provider.Settings.Secure.ALLOW_MOCK_LOCATION).equals("1");
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.M &&
+          Settings.Secure.getString(mContext.getContentResolver(), android.provider.Settings.Secure.ALLOW_MOCK_LOCATION).equals("1");
     }
 
     /**
