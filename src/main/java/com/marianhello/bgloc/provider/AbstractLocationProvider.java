@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.media.AudioManager;
+import android.os.Build;
 import android.provider.Settings;
 import android.widget.Toast;
 
@@ -155,7 +156,8 @@ public abstract class AbstractLocationProvider implements LocationProvider {
     }
 
     public Boolean hasMockLocationsEnabled() {
-        return Settings.Secure.getString(mContext.getContentResolver(), android.provider.Settings.Secure.ALLOW_MOCK_LOCATION).equals("1");
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.M &&
+          Settings.Secure.getString(mContext.getContentResolver(), android.provider.Settings.Secure.ALLOW_MOCK_LOCATION).equals("1");
     }
 
     /**
