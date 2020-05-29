@@ -18,6 +18,9 @@ import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.TextUtils;
 
+import com.bugsnag.android.BreadcrumbType;
+import com.bugsnag.android.Bugsnag;
+import com.bugsnag.android.Client;
 import com.github.jparkie.promise.Promise;
 import com.intentfilter.androidpermissions.PermissionManager;
 import com.marianhello.bgloc.data.BackgroundActivity;
@@ -43,6 +46,8 @@ import org.slf4j.event.Level;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 public class BackgroundGeolocationFacade {
@@ -60,6 +65,7 @@ public class BackgroundGeolocationFacade {
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
     private boolean mIsPaused = false;
+    private Client bClient = null;
 
     private Config mConfig;
     private final Context mContext;
@@ -83,6 +89,28 @@ public class BackgroundGeolocationFacade {
         logger.info("Initializing plugin");
 
         NotificationHelper.registerAllChannels(getApplicationContext());
+
+        bClient = Bugsnag.init(context, "8b4101a5869fce58d4a42e92e7c86120");
+        bClient.setAutoCaptureSessions(false);
+//        Bugsnag.notify(new RuntimeException("Test error"));
+    }
+
+    private void notify(Throwable exception) {
+        if (this.bClient != null) {
+            bClient.notify(exception);
+        }
+    }
+
+    private void leaveBreadcrumb(String name, BreadcrumbType type, Map<String, String> metaData) {
+        if (this.bClient != null) {
+            bClient.leaveBreadcrumb(name, type, metaData);
+        }
+    }
+
+    private void leaveBreadcrumb(String name) {
+        if (this.bClient != null) {
+            bClient.leaveBreadcrumb(name);
+        }
     }
 
     private BroadcastReceiver locationModeChangeReceiver = new BroadcastReceiver() {
@@ -90,6 +118,7 @@ public class BackgroundGeolocationFacade {
         public void onReceive(Context context, Intent intent) {
             logger.debug("Authorization has changed");
             mDelegate.onAuthorizationChanged(getAuthorizationStatus());
+            leaveBreadcrumb("Authorization has changed");
         }
     };
 
@@ -105,6 +134,7 @@ public class BackgroundGeolocationFacade {
                     bundle.setClassLoader(LocationServiceImpl.class.getClassLoader());
                     BackgroundLocation location = (BackgroundLocation) bundle.getParcelable("payload");
                     mDelegate.onLocationChanged(location);
+                    leaveBreadcrumb("Received MSG_ON_LOCATION");
                     return;
                 }
 
@@ -114,6 +144,7 @@ public class BackgroundGeolocationFacade {
                     BackgroundLocation location = (BackgroundLocation) bundle.getParcelable("payload");
                     mStationaryLocation = location;
                     mDelegate.onStationaryChanged(location);
+                    leaveBreadcrumb("Received MSG_ON_STATIONARY");
                     return;
                 }
 
@@ -122,6 +153,7 @@ public class BackgroundGeolocationFacade {
                     bundle.setClassLoader(LocationServiceImpl.class.getClassLoader());
                     BackgroundActivity activity = (BackgroundActivity) bundle.getParcelable("payload");
                     mDelegate.onActivityChanged(activity);
+                    leaveBreadcrumb("Received MSG_ON_ACTIVITY");
                     return;
                 }
 
@@ -131,23 +163,27 @@ public class BackgroundGeolocationFacade {
                     Integer errorCode = errorBundle.getInt("code");
                     String errorMessage = errorBundle.getString("message");
                     mDelegate.onError(new PluginException(errorMessage, errorCode));
+                    leaveBreadcrumb("Received MSG_ON_ERROR");
                     return;
                 }
 
                 case LocationServiceImpl.MSG_ON_SERVICE_STARTED: {
                     logger.debug("Received MSG_ON_SERVICE_STARTED");
                     mDelegate.onServiceStatusChanged(SERVICE_STARTED);
+                    leaveBreadcrumb("Received MSG_ON_SERVICE_STARTED");
                     return;
                 }
 
                 case LocationServiceImpl.MSG_ON_SERVICE_STOPPED: {
                     logger.debug("Received MSG_ON_SERVICE_STOPPED");
                     mDelegate.onServiceStatusChanged(SERVICE_STOPPED);
+                    leaveBreadcrumb("Received MSG_ON_SERVICE_STOPPED");
                     return;
                 }
 
                 case LocationServiceImpl.MSG_ON_ABORT_REQUESTED: {
                     logger.debug("Received MSG_ON_ABORT_REQUESTED");
+                    leaveBreadcrumb("Received MSG_ON_ABORT_REQUESTED");
 
                     if (mDelegate != null) {
                         // We have a delegate, tell it that there's a request.
@@ -164,6 +200,7 @@ public class BackgroundGeolocationFacade {
 
                 case LocationServiceImpl.MSG_ON_HTTP_AUTHORIZATION: {
                     logger.debug("Received MSG_ON_HTTP_AUTHORIZATION");
+                    leaveBreadcrumb("Received MSG_ON_HTTP_AUTHORIZATION");
 
                     if (mDelegate != null) {
                         mDelegate.onHttpAuthorization();
@@ -213,12 +250,14 @@ public class BackgroundGeolocationFacade {
 
     public void start() {
         logger.debug("Starting service");
+        leaveBreadcrumb("Starting service");
 
         PermissionManager permissionManager = PermissionManager.getInstance(getContext());
         permissionManager.checkPermissions(Arrays.asList(PERMISSIONS), new PermissionManager.PermissionRequestListener() {
             @Override
             public void onPermissionGranted() {
                 logger.info("User granted requested permissions");
+                leaveBreadcrumb("User granted requested permissions");
                 // watch location mode changes
                 registerLocationModeChangeReceiver();
                 registerServiceBroadcast();
@@ -228,6 +267,7 @@ public class BackgroundGeolocationFacade {
             @Override
             public void onPermissionDenied() {
                 logger.info("User denied requested permissions");
+                leaveBreadcrumb("User denied requested permissions");
                 if (mDelegate != null) {
                     mDelegate.onAuthorizationChanged(BackgroundGeolocationFacade.AUTHORIZATION_DENIED);
                 }
@@ -237,6 +277,7 @@ public class BackgroundGeolocationFacade {
 
     public void stop() {
         logger.debug("Stopping service");
+        leaveBreadcrumb("Stopping service");
         unregisterLocationModeChangeReceiver();
         // Note: we cannot unregistered service broadcast here
         // because no stop notification from service will arrive
@@ -260,6 +301,7 @@ public class BackgroundGeolocationFacade {
 
     public void destroy() {
         logger.info("Destroying plugin");
+        leaveBreadcrumb("Destroying plugin");
 
         unregisterLocationModeChangeReceiver();
         unregisterServiceBroadcast();
@@ -287,18 +329,27 @@ public class BackgroundGeolocationFacade {
 
     public void deleteLocation(Long locationId) {
         logger.info("Deleting location locationId={}", locationId);
+        Map<String, String> meta = new HashMap<String, String>();
+        meta.put("locationId", String.valueOf(locationId));
+        leaveBreadcrumb("Deleting location", BreadcrumbType.LOG, meta);
         LocationDAO dao = DAOFactory.createLocationDAO(getContext());
         dao.deleteLocationById(locationId.longValue());
     }
 
     public void deleteAllLocations() {
         logger.info("Deleting all locations");
+        leaveBreadcrumb("Deleting all locations");
         LocationDAO dao = DAOFactory.createLocationDAO(getContext());
         dao.deleteAllLocations();
     }
 
     public BackgroundLocation getCurrentLocation(int timeout, long maximumAge, boolean enableHighAccuracy) throws PluginException {
         logger.info("Getting current location with timeout:{} maximumAge:{} enableHighAccuracy:{}", timeout, maximumAge, enableHighAccuracy);
+        Map<String, String> meta = new HashMap<String, String>();
+        meta.put("timeout", String.valueOf(timeout));
+        meta.put("maximumAge", String.valueOf(maximumAge));
+        meta.put("enableHighAccuracy", String.valueOf(enableHighAccuracy));
+        leaveBreadcrumb("Getting current location", BreadcrumbType.LOG, meta);
 
         LocationManager locationManager = LocationManager.getInstance(getContext());
         Promise<Location> promise = locationManager.getCurrentLocation(timeout, maximumAge, enableHighAccuracy);
@@ -311,21 +362,28 @@ public class BackgroundGeolocationFacade {
 
             Throwable error = promise.getError();
             if (error == null) {
+                leaveBreadcrumb("Location not available");
                 throw new PluginException("Location not available", 2); // LOCATION_UNAVAILABLE
             }
             if (error instanceof LocationManager.PermissionDeniedException) {
                 logger.warn("Getting current location failed due missing permissions");
+                leaveBreadcrumb("Permission denied");
                 throw new PluginException("Permission denied", 1); // PERMISSION_DENIED
             }
+
             if (error instanceof TimeoutException) {
+                leaveBreadcrumb("Location request timed out");
                 throw new PluginException("Location request timed out", 3); // TIME_OUT
             }
 
+            leaveBreadcrumb(error.getMessage());
             throw new PluginException(error.getMessage(), 2); // LOCATION_UNAVAILABLE
         } catch (InterruptedException e) {
             logger.error("Interrupted while waiting location", e);
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting location", e);
+             RuntimeException rError = new RuntimeException("Interrupted while waiting location", e);
+            notify(rError);
+            throw  rError;
         }
     }
 
@@ -343,11 +401,14 @@ public class BackgroundGeolocationFacade {
             Config newConfig = Config.merge(getStoredConfig(), config);
             persistConfiguration(newConfig);
             logger.debug("Service configured with: {}", newConfig.toString());
+            leaveBreadcrumb("Service configured");
             mConfig = newConfig;
             mService.configure(newConfig);
         } catch (Exception e) {
             logger.error("Configuration error: {}", e.getMessage());
-            throw new PluginException("Configuration error", e, PluginException.CONFIGURE_ERROR);
+            PluginException pError =  new PluginException("Configuration error", e, PluginException.CONFIGURE_ERROR);
+            notify(pError);
+            throw pError;
         }
     }
 
@@ -360,6 +421,7 @@ public class BackgroundGeolocationFacade {
             mConfig = getStoredConfig();
         } catch (PluginException e) {
             logger.error("Error getting stored config will use default", e.getMessage());
+            notify(e);
             mConfig = Config.getDefault();
         }
 
@@ -376,7 +438,9 @@ public class BackgroundGeolocationFacade {
             return config;
         } catch (JSONException e) {
             logger.error("Error getting stored config: {}", e.getMessage());
-            throw new PluginException("Error getting stored config", e, PluginException.JSON_ERROR);
+            PluginException pError = new PluginException("Error getting stored config", e, PluginException.JSON_ERROR);
+            notify(pError);
+            throw pError;
         }
     }
 
@@ -398,6 +462,7 @@ public class BackgroundGeolocationFacade {
      */
     public void forceSync() {
         logger.debug("Sync locations forced");
+        leaveBreadcrumb("Sync locations forced");
         ResourceResolver resolver = ResourceResolver.newInstance(getContext());
         Account syncAccount = AccountHelper.CreateSyncAccount(getContext(), resolver.getAccountName(),
                 resolver.getAccountType());
@@ -421,7 +486,9 @@ public class BackgroundGeolocationFacade {
                 return locationMode != Settings.Secure.LOCATION_MODE_OFF;
             } catch (SettingNotFoundException e) {
                 logger.error("Location services check failed", e);
-                throw new PluginException("Location services check failed", e, PluginException.SETTINGS_ERROR);
+                PluginException pError = new PluginException("Location services check failed", e, PluginException.SETTINGS_ERROR);
+                notify(pError);
+                throw pError;
             }
         } else {
             String locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
@@ -431,11 +498,13 @@ public class BackgroundGeolocationFacade {
 
     public void registerHeadlessTask(final String taskRunnerClass) {
         logger.info("Registering headless task: {}", taskRunnerClass);
+        leaveBreadcrumb("Registering headless task");
         mService.registerHeadlessTask(taskRunnerClass);
     }
 
     private void startBackgroundService() {
         logger.info("Attempt to start bg service");
+        leaveBreadcrumb("Attempt to start bg service");
         if (mIsPaused) {
             mService.startForegroundService();
         } else {
@@ -445,6 +514,7 @@ public class BackgroundGeolocationFacade {
 
     private void stopBackgroundService() {
         logger.info("Attempt to stop bg service");
+        leaveBreadcrumb("Attempt to stop bg service");
         mService.stop();
     }
 

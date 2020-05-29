@@ -88,6 +88,8 @@ android {
 }
 
 dependencies {
+     implementation 'com.bugsnag:bugsnag-android:4.22.3'
+    //  implementation 'com.google.firebase:firebase-analytics:17.4.2'
     projDependencies.each {
         add(it.configuration, it.dependency)
     }
