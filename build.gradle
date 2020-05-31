@@ -6,7 +6,7 @@ def resourcePrefix = getResourcePrefix()
 
 // https://hackernoon.com/android-how-to-add-gradle-dependencies-using-foreach-c4cbcc070458
 def projDependencies = [
-    [configuration: "androidTestImplementation", dependency: androidLibs.supportAnnotations],
+    [configuration: "androidTestImplementation", dependency: androidLibs.annotations],
     [configuration: "androidTestImplementation", dependency: testLibs.testRunner],
     [configuration: "androidTestImplementation", dependency: testLibs.testRules],
     [configuration: "testImplementation", dependency: testLibs.testRunner],
@@ -16,10 +16,11 @@ def projDependencies = [
     [configuration: "testImplementation", dependency: testLibs.robolectric],
     [configuration: "testImplementation", dependency: testLibs.mockitoCore],
     [configuration: "implementation", dependency: androidLibs.playServicesLocation],
-    [configuration: "implementation", dependency: androidLibs.supportCompat],
+    [configuration: "implementation", dependency: androidLibs.androidxCore],
+    [configuration: "implementation", dependency: androidLibs.localbroadcastmanager],
     [configuration: "implementation", dependency: androidLibs.appcompat],
     [configuration: "implementation", dependency: libs.permissions,
-        options: { exclude group: 'com.android.support', module: 'appcompat-v7'}],
+        options: { exclude group: 'androidx.appcompat', module: 'appcompat'}],
     [configuration: "implementation", dependency: libs.logback],
     [configuration: "implementation", dependency: libs.slf4j],
     [configuration: "implementation", dependency: libs.promise],
@@ -64,7 +65,7 @@ android {
         resValue "string", resourcePrefix + "account_name", 'Locations'
         resValue "string", resourcePrefix + "account_type", accountPrefix + '.account'
         resValue "string", resourcePrefix + "content_authority", accountPrefix + '.provider'
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         minSdkVersion project.ext.getMinSdkVersion()
         versionCode 1
         versionName "1.0"
