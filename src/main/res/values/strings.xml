@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">app_name</string>
+    <string name="background_service_notification_channel_name">Background location service</string>
+    <string name="android_permission_notification_channel_name">Permission notifications</string>
 </resources>
