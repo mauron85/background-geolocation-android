@@ -124,6 +124,7 @@ public class NotificationHelper {
     public static NotificationChannel createServiceChannel(CharSequence name) {
         NotificationChannel channel = new NotificationChannel(SERVICE_CHANNEL_ID, name, android.app.NotificationManager.IMPORTANCE_LOW);
         channel.enableVibration(false);
+        channel.setShowBadge(false); // avoid badge count due to background service notification
         return channel;
     }
 
