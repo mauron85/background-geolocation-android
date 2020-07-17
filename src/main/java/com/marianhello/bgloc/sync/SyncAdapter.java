@@ -73,7 +73,9 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter implements HttpPost
         batchManager = new BatchManager(this.getContext());
         notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
 
-        NotificationHelper.registerSyncChannel(context);
+        // comment out this line as the main app is not using sync service
+        // TODO: consider dynamically register this notification channel based on config
+        // NotificationHelper.registerSyncChannel(context);
     }
 
     /*

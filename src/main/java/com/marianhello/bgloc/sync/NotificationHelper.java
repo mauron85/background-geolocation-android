@@ -92,7 +92,9 @@ public class NotificationHelper {
             // the NotificationChannel class is new and not in the support library
             android.app.NotificationManager notificationManager = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.createNotificationChannel(createServiceChannel(appName));
-            notificationManager.createNotificationChannel(createSyncChannel());
+            // comment out this line as the main app is not using sync service
+            // TODO: consider dynamically register this notification channel based on config
+            // notificationManager.createNotificationChannel(createSyncChannel());
             notificationManager.createNotificationChannel(createAndroidPermissionsChannel(appName));
         }
     }
