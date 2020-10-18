@@ -52,10 +52,7 @@ public class BackgroundGeolocationFacade {
     public static final int AUTHORIZATION_AUTHORIZED = 1;
     public static final int AUTHORIZATION_DENIED = 0;
 
-    public static final String[] PERMISSIONS = {
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-    };
+    public static final String[] PERMISSIONS = getRequiredPermissions();
 
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
@@ -69,6 +66,22 @@ public class BackgroundGeolocationFacade {
     private BackgroundLocation mStationaryLocation;
 
     private org.slf4j.Logger logger;
+
+    private static String[] getRequiredPermissions() {
+        if(android.os.Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            return new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+            };
+        }
+        else {
+            return new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            };
+        }
+    }
 
     public BackgroundGeolocationFacade(Context context, PluginDelegate delegate) {
         mContext = context;
