@@ -23,16 +23,10 @@ public class LocationManager {
     private Context mContext;
     private static LocationManager mLocationManager;
 
-    public static final String[] PERMISSIONS = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P ?
-            new String[]{
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }
-            : new String[]{
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            };
+    public static final String[] PERMISSIONS = new String[]{
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+    };
 
     private LocationManager(Context context) {
         mContext = context;
