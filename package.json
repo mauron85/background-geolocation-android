@@ -1,0 +1,19 @@
+{
+  "name": "@mauron85/background-geolocation-android",
+  "version": "1.0.0",
+  "description": "Background Geolocation for Android",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/@mauron85/background-geolocation-android.git"
+  },
+  "author": "Marian Hello",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/@mauron85/background-geolocation-android/issues"
+  },
+  "homepage": "https://github.com/@mauron85/background-geolocation-android#readme"
+}
