@@ -269,7 +269,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null) {
+        if (intent == null || !containsCommand(intent)) {
             // when service was killed and restarted we will restart service
             start();
             return START_STICKY;
